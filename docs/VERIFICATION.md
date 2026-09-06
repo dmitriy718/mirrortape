@@ -41,8 +41,9 @@ Run from `app/`: `npm run lint`, `npm run build`, `npm test`, `npm run test:e2e`
 - Dependency audit: zero known findings in the local npm audit result on the verification date. This is not a guarantee against undisclosed vulnerabilities.
 - ShellCheck and `bash -n deploy/deploy.sh`: passed.
 - Caddy 2.11.4: official release archive SHA-512 matched; production site configuration validated with only its upstream include path redirected to a local validation file. No certificate was issued and no public port was opened.
+- Graceful shutdown: the isolated compiled runtime became ready and exited with code 0 after SIGTERM; sustained in-flight traffic and VPS reboot drills remain unverified.
 - Backup: `scripts/backup-db.mjs` created an exclusive custom-format archive and validated its contents. Restored into a newly created local database `mirrortape_restore_20260906`; 17 public tables and the migration record were verified. Source data was not overwritten. The test restore database/archive are retained locally.
-- GitHub CI and actual VPS release: status is recorded in the final implementation log; local checks alone are not deployment evidence.
+- GitHub Linux CI: [run 34067767935](https://github.com/dmitriy718/mirrortape/actions/runs/34067767935) passed for application commit `893bb73`, including all 42 Chromium cases. Caddy configuration also passed inside Linux. Actual VPS release remains unverified.
 
 Playwright HTML/JSON reports, failure traces and screenshots are under ignored `app/playwright-report/` and `app/test-results/`. CI uploads those artifacts for 14 days. They may contain isolated test emails/tokens, so treat them as test artifacts rather than marketing assets.
 
