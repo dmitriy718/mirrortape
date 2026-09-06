@@ -1,0 +1,162 @@
+
+> my-app@0.0.0 lint
+> eslint .
+
+
+/Users/dima/Desktop/kimiexp/app/src/components/GaugeMeter.tsx
+  30:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/dima/Desktop/kimiexp/app/src/components/GaugeMeter.tsx:30:7
+  28 |     if (!inView) return;
+  29 |     if (reduced) {
+> 30 |       setShown(pct);
+     |       ^^^^^^^^ Avoid calling setState() directly within an effect
+  31 |       return;
+  32 |     }
+  33 |     const from = prevTarget.current;  react-hooks/set-state-in-effect
+
+/Users/dima/Desktop/kimiexp/app/src/components/Navbar.tsx
+  9:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/dima/Desktop/kimiexp/app/src/components/StatBlock.tsx
+  32:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/dima/Desktop/kimiexp/app/src/components/StatBlock.tsx:32:7
+  30 |     if (!inView) return;
+  31 |     if (reduced) {
+> 32 |       setDisplay(value);
+     |       ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  33 |       return;
+  34 |     }
+  35 |     const start = performance.now();  react-hooks/set-state-in-effect
+
+/Users/dima/Desktop/kimiexp/app/src/components/ui/badge.tsx
+  46:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/dima/Desktop/kimiexp/app/src/components/ui/button-group.tsx
+  82:3  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/dima/Desktop/kimiexp/app/src/components/ui/button.tsx
+  62:18  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/dima/Desktop/kimiexp/app/src/components/ui/form.tsx
+  159:3  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/dima/Desktop/kimiexp/app/src/components/ui/navigation-menu.tsx
+  167:3  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/dima/Desktop/kimiexp/app/src/components/ui/sidebar.tsx
+  611:26  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/Users/dima/Desktop/kimiexp/app/src/components/ui/sidebar.tsx:611:26
+  609 |   // Random width between 50 to 90%.
+  610 |   const width = React.useMemo(() => {
+> 611 |     return `${Math.floor(Math.random() * 40) + 50}%`
+      |                          ^^^^^^^^^^^^^ Cannot call impure function
+  612 |   }, [])
+  613 |
+  614 |   return (  react-hooks/purity
+  725:3   error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         react-refresh/only-export-components
+
+/Users/dima/Desktop/kimiexp/app/src/components/ui/toggle.tsx
+  45:18  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/dima/Desktop/kimiexp/app/src/pages/demo/ChartPanel.tsx
+  44:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/dima/Desktop/kimiexp/app/src/pages/demo/ChartPanel.tsx:44:5
+  42 |     for (let i = 0; i < 6; i++) seed.push(market.randomFeedEvent());
+  43 |     seenRef.current = seed[seed.length - 1]?.id ?? 0;
+> 44 |     setFills(seed.reverse());
+     |     ^^^^^^^^ Avoid calling setState() directly within an effect
+  45 |     const unsub = market.subscribeFeed((e) => {
+  46 |       if (e.id <= seenRef.current) return;
+  47 |       seenRef.current = e.id;  react-hooks/set-state-in-effect
+
+/Users/dima/Desktop/kimiexp/app/src/pages/demo/RightRail.tsx
+  287:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/dima/Desktop/kimiexp/app/src/pages/demo/RightRail.tsx:287:7
+  285 |     }
+  286 |     if (focusView !== 'TERMINAL') {
+> 287 |       setHighlight(focusView);
+      |       ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  288 |       const t = setTimeout(() => setHighlight(null), 1400);
+  289 |       return () => clearTimeout(t);
+  290 |     }  react-hooks/set-state-in-effect
+
+/Users/dima/Desktop/kimiexp/app/src/pages/demo/TerminalChart.tsx
+  52:3  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/dima/Desktop/kimiexp/app/src/pages/demo/TerminalChart.tsx:52:3
+  50 |   const sizeRef = useRef({ w: 0, h: 0 });
+  51 |   const chartTypeRef = useRef(chartType);
+> 52 |   chartTypeRef.current = chartType;
+     |   ^^^^^^^^^^^^^^^^^^^^ Cannot update ref during render
+  53 |   const tfRef = useRef(timeframe);
+  54 |   tfRef.current = timeframe;
+  55 |  react-hooks/refs
+  54:3  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/dima/Desktop/kimiexp/app/src/pages/demo/TerminalChart.tsx:54:3
+  52 |   chartTypeRef.current = chartType;
+  53 |   const tfRef = useRef(timeframe);
+> 54 |   tfRef.current = timeframe;
+     |   ^^^^^^^^^^^^^ Cannot update ref during render
+  55 |
+  56 |   const draw = useCallback(() => {
+  57 |     const canvas = canvasRef.current;                    react-hooks/refs
+
+/Users/dima/Desktop/kimiexp/app/src/pages/home/Hero.tsx
+  71:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/dima/Desktop/kimiexp/app/src/pages/home/Hero.tsx:71:5
+  69 |     const seed: MirrorEvent[] = [];
+  70 |     for (let i = 0; i < 5; i++) seed.push(market.randomFeedEvent());
+> 71 |     setEvents(seed.reverse());
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  72 |     return market.subscribeFeed((e) => {
+  73 |       setEvents((prev) => [e, ...prev].slice(0, 8));
+  74 |     });  react-hooks/set-state-in-effect
+
+/Users/dima/Desktop/kimiexp/app/src/pages/home/LeaderboardPreview.tsx
+  8:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+✖ 17 problems (17 errors, 0 warnings)
+
