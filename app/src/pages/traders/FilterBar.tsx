@@ -179,7 +179,7 @@ export default function FilterBar({
     <div
       ref={barRef}
       className={cn(
-        'sticky top-[52px] z-40 border-b transition-[background-color,border-color] duration-[250ms]',
+        'sticky top-[52px] z-40 border-b transition-[background-color,border-color] duration-200',
         stuck
           ? 'border-border bg-surface-1/90 backdrop-blur-[12px]'
           : 'border-transparent bg-transparent',

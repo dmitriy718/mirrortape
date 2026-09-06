@@ -61,14 +61,11 @@ function WatchlistRow({
 }
 
 function MirrorFeed() {
-  const [events, setEvents] = useState<MirrorEvent[]>([]);
+  const [events, setEvents] = useState<MirrorEvent[]>(() => Array.from({ length: 5 }, () => market.randomFeedEvent()).reverse());
   const reduced = usePrefersReducedMotion();
 
   useEffect(() => {
     // seed initial rows
-    const seed: MirrorEvent[] = [];
-    for (let i = 0; i < 5; i++) seed.push(market.randomFeedEvent());
-    setEvents(seed.reverse());
     return market.subscribeFeed((e) => {
       setEvents((prev) => [e, ...prev].slice(0, 8));
     });

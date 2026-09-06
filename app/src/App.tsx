@@ -1,27 +1,36 @@
-import { Routes, Route } from 'react-router';
-import Layout from '@/components/Layout';
-import Home from '@/pages/Home';
-import Demo from '@/pages/Demo';
-import Traders from '@/pages/Traders';
-import HowItWorks from '@/pages/HowItWorks';
-import Pricing from '@/pages/Pricing';
-import Risk from '@/pages/Risk';
-import Faq from '@/pages/Faq';
-import Placeholder from '@/pages/Placeholder';
-
+import { lazy, Suspense } from "react";
+import { Routes, Route, Navigate } from "react-router";
+import { Landing, PricingPage, InformationPage } from "@/workspace/PublicPages";
+import { Shell, Skeleton, ErrorBoundary } from "@/workspace/Primitives";
+const Workspace = lazy(() => import("@/workspace/Workspace"));
+const AuthPage = lazy(() => import("@/workspace/AuthPage"));
 export default function App() {
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route index element={<Home />} />
-        <Route path="demo" element={<Demo />} />
-        <Route path="traders" element={<Traders />} />
-        <Route path="how-it-works" element={<HowItWorks />} />
-        <Route path="pricing" element={<Pricing />} />
-        <Route path="risk" element={<Risk />} />
-        <Route path="faq" element={<Faq />} />
-        <Route path="*" element={<Placeholder label="404" title="Off the tape." />} />
-      </Route>
-    </Routes>
+    <ErrorBoundary>
+      <Suspense
+        fallback={
+          <Shell>
+            <Skeleton />
+          </Shell>
+        }
+      >
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/app" element={<Workspace />} />
+          {["login", "register", "recover", "resend", "reset", "verify"].map(
+            (path) => (
+              <Route
+                key={path}
+                path={`/app/${path}`}
+                element={<AuthPage key={path} />}
+              />
+            ),
+          )}
+          <Route path="/demo" element={<Navigate to="/app" replace />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="*" element={<InformationPage />} />
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   );
 }

@@ -26,10 +26,7 @@ export default function GaugeMeter({
 
   useEffect(() => {
     if (!inView) return;
-    if (reduced) {
-      setShown(pct);
-      return;
-    }
+    if (reduced) return;
     const from = prevTarget.current;
     const start = performance.now();
     const dur = 800;
@@ -45,7 +42,8 @@ export default function GaugeMeter({
     return () => cancelAnimationFrame(raf.current);
   }, [pct, inView, reduced]);
 
-  const zoneColor = shown < 0.4 ? 'var(--mint)' : shown <= 0.7 ? 'var(--amber)' : 'var(--red)';
+  const visible = reduced ? pct : shown;
+  const zoneColor = visible < 0.4 ? 'var(--mint)' : visible <= 0.7 ? 'var(--amber)' : 'var(--red)';
 
   const h = width / 2;
   const r = width / 2 - 14;
@@ -67,9 +65,9 @@ export default function GaugeMeter({
     <div ref={ref} className={cn('flex flex-col items-center', className)}>
       <svg width={width} height={h + 8} viewBox={`0 0 ${width} ${h + 8}`}>
         <path d={arcPath(1)} fill="none" stroke="var(--border)" strokeWidth={10} strokeLinecap="round" />
-        {shown > 0.004 && (
+        {visible > 0.004 && (
           <path
-            d={arcPath(shown)}
+            d={arcPath(visible)}
             fill="none"
             stroke={zoneColor}
             strokeWidth={10}
@@ -86,7 +84,7 @@ export default function GaugeMeter({
           fontWeight={700}
           fontSize={24}
         >
-          {(shown * max).toFixed(1)}%
+          {(visible * max).toFixed(1)}%
         </text>
         {label && (
           <text

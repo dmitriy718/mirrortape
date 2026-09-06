@@ -1,0 +1,59 @@
+name: MirrorTape quality gates
+on:
+  push:
+  pull_request:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mirrortape
+          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_DB: mirrortape_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mirrortape -d mirrortape_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: app
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://mirrortape:test-only-password@127.0.0.1:5432/mirrortape_test
+      APP_ORIGIN: http://127.0.0.1:3110
+      PORT: "3110"
+      SESSION_SECRET: test-only-session-secret-never-used-in-production-1234567890
+      ENCRYPTION_KEY: "1111111111111111111111111111111111111111111111111111111111111111"
+      COHORT_CAPACITY: "3"
+      RELEASE_ID: e2e
+      SMTP_URL: smtp://127.0.0.1:3325
+      MAIL_FROM: test@mirrortape.net
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - run: npm run lint
+      - run: npm run build
+      - run: npm audit --audit-level=high
+      - run: npm test
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chromium-reports
+          path: |
+            app/playwright-report
+            app/test-results
+          retention-days: 14

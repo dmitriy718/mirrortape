@@ -1,0 +1,41 @@
+# Import this site into the existing Caddyfile after inspecting other hosted sites.
+# First provision /etc/caddy/mirrortape-upstream.caddy with the verified active loopback upstream.
+mirrortape.net {
+	encode zstd gzip
+	request_body {
+		max_size 256KB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		-Server
+	}
+	@assets path /assets/*
+	handle @assets {
+		root * /srv/mirrortape/shared
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+	handle {
+		import /etc/caddy/mirrortape-upstream.caddy
+	}
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>headers>Cookie delete
+				request>headers>Authorization delete
+				request>uri query {
+					delete code
+					delete state
+					delete token
+				}
+			}
+		}
+	}
+}
+# Add a www redirect only after www DNS points to this server and TLS is verified.

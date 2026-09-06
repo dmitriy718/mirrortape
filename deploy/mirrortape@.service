@@ -1,0 +1,37 @@
+[Unit]
+Description=MirrorTape release %i
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=mirrortape
+Group=mirrortape
+WorkingDirectory=/srv/mirrortape/releases/%i/app
+EnvironmentFile=/etc/mirrortape/app.env
+EnvironmentFile=/etc/mirrortape/instances/%i.env
+ExecStart=/usr/bin/node server-dist/index.js
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=35
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+UMask=0077
+MemoryMax=768M
+TasksMax=128
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mirrortape-%i
+
+[Install]
+WantedBy=multi-user.target

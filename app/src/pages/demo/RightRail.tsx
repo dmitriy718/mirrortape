@@ -284,9 +284,9 @@ export default function RightRail({
       else scroller.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
     }
     if (focusView !== 'TERMINAL') {
-      setHighlight(focusView);
+      const frame = requestAnimationFrame(() => setHighlight(focusView));
       const t = setTimeout(() => setHighlight(null), 1400);
-      return () => clearTimeout(t);
+      return () => { clearTimeout(t); cancelAnimationFrame(frame); };
     }
   }, [focusView, focusNonce, reduced]);
 

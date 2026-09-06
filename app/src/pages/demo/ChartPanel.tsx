@@ -33,15 +33,11 @@ export default function ChartPanel({
   reduced: boolean;
 }) {
   const s = useSymbolState(symbol);
-  const [fills, setFills] = useState<MirrorEvent[]>([]);
+  const [fills, setFills] = useState<MirrorEvent[]>(() => Array.from({ length: 6 }, () => market.randomFeedEvent()).reverse());
   const seenRef = useRef(0);
 
   // seed + live mirrored fills for the trade strip
   useEffect(() => {
-    const seed: MirrorEvent[] = [];
-    for (let i = 0; i < 6; i++) seed.push(market.randomFeedEvent());
-    seenRef.current = seed[seed.length - 1]?.id ?? 0;
-    setFills(seed.reverse());
     const unsub = market.subscribeFeed((e) => {
       if (e.id <= seenRef.current) return;
       seenRef.current = e.id;

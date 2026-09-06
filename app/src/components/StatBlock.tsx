@@ -28,10 +28,7 @@ export default function StatBlock({
 
   useEffect(() => {
     if (!inView) return;
-    if (reduced) {
-      setDisplay(value);
-      return;
-    }
+    if (reduced) return;
     const start = performance.now();
     const step = (t: number) => {
       const p = Math.min(1, (t - start) / (duration * 1000));
@@ -50,7 +47,7 @@ export default function StatBlock({
       </span>
       <span className="flex items-baseline gap-1.5 font-mono text-[32px] font-bold leading-none tabular-nums text-text-1">
         {caret && <span className="text-sm text-cyan">▲</span>}
-        {format(display)}
+        {format(reduced ? value : display)}
         {delta !== undefined && (
           <span className={cn('ml-1 text-sm font-semibold', delta >= 0 ? 'text-mint' : 'text-red')}>
             {delta >= 0 ? '+' : ''}

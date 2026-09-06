@@ -5,7 +5,7 @@ import CopyButton from '@/components/CopyButton';
 import { useInView } from '@/hooks/useInView';
 import { cn } from '@/lib/utils';
 
-export const TRADER_ROWS = [
+const TRADER_ROWS = [
   { handle: '@delta_hunter', avatar: '/avatar-01.png', ret: 214.6, win: 71.2, dd: -11.4, followers: '18,204', equity: [10, 12, 11, 14, 16, 15, 19, 22, 21, 26] },
   { handle: '@iron_condor_kate', avatar: '/avatar-02.png', ret: 162.3, win: 78.9, dd: -6.8, followers: '12,847', equity: [10, 11, 12, 12.5, 13, 14, 14.5, 15.5, 16, 17] },
   { handle: '@tape_reader', avatar: '/avatar-03.png', ret: 141.8, win: 66.4, dd: -14.2, followers: '9,312', equity: [12, 10, 13, 12, 14, 13, 16, 15, 18, 19] },

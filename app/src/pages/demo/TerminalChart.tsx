@@ -49,9 +49,9 @@ export default function TerminalChart({
   const rafRef = useRef(0);
   const sizeRef = useRef({ w: 0, h: 0 });
   const chartTypeRef = useRef(chartType);
-  chartTypeRef.current = chartType;
+
   const tfRef = useRef(timeframe);
-  tfRef.current = timeframe;
+  useEffect(() => { chartTypeRef.current = chartType; tfRef.current = timeframe; }, [chartType, timeframe]);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;

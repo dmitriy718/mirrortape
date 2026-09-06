@@ -6,7 +6,7 @@ import { PrimaryButton } from '@/components/Buttons';
 import { getMarketStatus } from '@/lib/marketHours';
 import { cn } from '@/lib/utils';
 
-export const NAV_LINKS = [
+const NAV_LINKS = [
   { label: 'Live Demo', to: '/demo' },
   { label: 'Traders', to: '/traders' },
   { label: 'How It Works', to: '/how-it-works' },

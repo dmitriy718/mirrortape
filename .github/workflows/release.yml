@@ -1,0 +1,58 @@
+name: Release to the configured VPS
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mirrortape-production
+  cancel-in-progress: false
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      VPS_HOST: ${{ vars.VPS_HOST }}
+      VPS_USER: ${{ vars.VPS_USER }}
+      VPS_REPO_PATH: ${{ vars.VPS_REPO_PATH }}
+      RELEASE_SHA: ${{ github.sha }}
+      SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+      SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+    steps:
+      - name: Validate deployment configuration and pinned host identity
+        shell: bash
+        run: |
+          set -uo pipefail
+          fail() { printf '%s\n' "$1" >&2; exit 1; }
+          [[ "$GITHUB_REF" == refs/heads/main ]] || fail 'Deploy only reviewed main commits.'
+          [[ "$VPS_HOST" =~ ^[a-zA-Z0-9.-]+$ ]] || fail 'Set the production VPS_HOST variable.'
+          [[ "$VPS_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || fail 'Set the production VPS_USER variable.'
+          [[ "$VPS_REPO_PATH" =~ ^/[a-zA-Z0-9/_-]+$ ]] || fail 'Set an absolute VPS_REPO_PATH without spaces or shell characters.'
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]] || fail 'Invalid release commit.'
+          [[ -n "$SSH_PRIVATE_KEY" && -n "$SSH_KNOWN_HOSTS" ]] || fail 'Configure the protected SSH key and independently verified known_hosts secrets.'
+          umask 077
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$RUNNER_TEMP/mirrortape-key" || fail 'Could not stage SSH identity.'
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$RUNNER_TEMP/mirrortape-hosts" || fail 'Could not stage pinned host keys.'
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/mirrortape-key" >/dev/null || fail 'The deployment identity is invalid or requires an interactive passphrase.'
+      - name: Deploy the tested commit with rollback on failed health checks
+        shell: bash
+        run: |
+          set -uo pipefail
+          ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/mirrortape-hosts" \
+            -i "$RUNNER_TEMP/mirrortape-key" "$VPS_USER@$VPS_HOST" \
+            bash -s -- "$VPS_REPO_PATH" "$RELEASE_SHA" <<'REMOTE'
+          set -uo pipefail
+          repo=$1
+          commit=$2
+          fail() { printf '%s\n' "$1" >&2; exit 1; }
+          cd "$repo" || fail 'Deployment checkout is unavailable.'
+          [[ -z $(git status --porcelain) ]] || fail 'Deployment checkout has uncommitted changes.'
+          git fetch --no-tags origin main || fail 'Fetching the release failed.'
+          git merge-base --is-ancestor "$commit" origin/main || fail 'Release is not on origin/main.'
+          git switch --detach "$commit" || fail 'Could not select the tested commit.'
+          sudo -n ./deploy/deploy.sh "$repo" "$commit" --apply || fail 'Deployment failed; inspect rollback output and service logs.'
+          REMOTE
