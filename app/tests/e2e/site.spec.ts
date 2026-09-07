@@ -287,6 +287,12 @@ test("F04/F05 contact compares cross-tab conflicts before replacing either versi
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    await expect(comparison).toBeFocused();
+    const panelBounds = await comparison.boundingBox();
+    const navigationBounds = await page.locator(".product-nav").boundingBox();
+    expect(panelBounds!.y).toBeGreaterThanOrEqual(
+      navigationBounds!.y + navigationBounds!.height,
+    );
     await comparison.screenshot({
       path: info.outputPath("draft-conflict.png"),
     });

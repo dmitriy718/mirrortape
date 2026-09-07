@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { Draft } from "./api";
 import type { useDraft } from "./useDraft";
 import { Recovery } from "./Primitives";
@@ -30,10 +31,26 @@ export default function DraftRecovery({
 }: {
   draft: ReturnType<typeof useDraft>;
 }) {
+  const region = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!draft.review || !region.current) return;
+    const navigationHeight =
+      document.querySelector(".product-nav")?.getBoundingClientRect().height ??
+      0;
+    const top =
+      region.current.getBoundingClientRect().top +
+      window.scrollY -
+      navigationHeight -
+      24;
+    region.current.focus({ preventScroll: true });
+    window.scrollTo({ top: Math.max(0, top), behavior: "instant" });
+  }, [draft.review]);
   if (!draft.error && !draft.review) return null;
   if (draft.review)
     return (
       <section
+        ref={region}
+        tabIndex={-1}
         className="draft-conflicts panel"
         aria-label="Compare draft changes"
       >

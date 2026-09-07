@@ -80,3 +80,5 @@ Publication verified: application commit `893bb73d4c6957950c355bde647769aad557d7
 - The first expanded run passed 43 backend/unit tests and 70 Chromium cases. A subsequent startup-failure check expanded Chromium coverage to 72. Its initial TypeScript nullable-capture failure was corrected before build/test execution. Final gate and deployment evidence follows after completion.
 
 Local final regression: lint/build, 43 backend/unit tests, 72 Chromium cases, nine release fault tests, two actual Caddy proxy tests and zero npm audit findings passed. Follow-up shutdown assertions also passed on both viewports. This increment changes no schema or credentials; live provider acceptance remains blocked by configuration.
+
+Visual follow-up found the sticky navigation could cover the newly opened comparison heading. The comparison now receives keyboard focus and scrolls below the measured navigation height. Both viewport cases passed focused assertions for heading position, focus, overflow and axe checks after the fix; desktop/mobile artifacts were generated and reviewed.
