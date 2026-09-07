@@ -33,7 +33,7 @@ export async function workspaceRoutes(app: FastifyInstance, ctx: Context) {
     );
     const r = result.rows[0];
     return {
-      data: draftData.parse(r?.data ?? {}),
+      data: draftData.strip().parse(r?.data ?? {}),
       revision: r?.revision ?? 0,
       savedAt: r?.updated_at ?? null,
     };
