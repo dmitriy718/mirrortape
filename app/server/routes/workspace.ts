@@ -62,7 +62,7 @@ export async function workspaceRoutes(app: FastifyInstance, ctx: Context) {
         throw new AppError(
           409,
           "DRAFT_CONFLICT",
-          "This draft changed in another tab. Reload the saved version before making more changes.",
+          "Another tab saved changes first. Review both versions to keep the changes you want.",
         );
       if (!body.data.shareActivity)
         await client.query("DELETE FROM activity WHERE user_id=$1", [

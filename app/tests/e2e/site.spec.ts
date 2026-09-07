@@ -310,6 +310,44 @@ test("F04/F05 contact compares cross-tab conflicts before replacing either versi
     await comparison.screenshot({
       path: info.outputPath("draft-conflict.png"),
     });
+    info.annotations.push({
+      type: "expected-console",
+      description: "503 (Service Unavailable)",
+    });
+    await page
+      .getByLabel("Your message (required)")
+      .fill("My revised message must survive a failed comparison check.");
+    await page.route(
+      "**/api/draft",
+      async (route) => {
+        if (route.request().method() === "GET")
+          await route.fulfill({
+            status: 503,
+            contentType: "application/json",
+            body: JSON.stringify({
+              error: {
+                code: "UNAVAILABLE",
+                message: "Saved changes could not be loaded. Try again.",
+              },
+            }),
+          });
+        else await route.continue();
+      },
+      { times: 1 },
+    );
+    await page
+      .getByRole("button", { name: "Keep this tab’s versions" })
+      .click();
+    await expect(comparison.getByRole("alert")).toHaveText(
+      "Saved changes could not be loaded. Try again.",
+    );
+    await page
+      .getByRole("button", { name: "Keep this tab’s versions" })
+      .click();
+    await expect(comparison).toContainText(
+      "My revised message must survive a failed comparison check.",
+    );
+    await expect(comparison.getByRole("alert")).toHaveCount(0);
     await page
       .getByRole("button", { name: "Keep this tab’s versions" })
       .click();
@@ -318,7 +356,7 @@ test("F04/F05 contact compares cross-tab conflicts before replacing either versi
     ).toBeVisible();
     await other.reload();
     await expect(other.getByLabel("Your message (required)")).toHaveValue(
-      "My unsaved message must not silently disappear.",
+      "My revised message must survive a failed comparison check.",
     );
   } finally {
     await other.close();

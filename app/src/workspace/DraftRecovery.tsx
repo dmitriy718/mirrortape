@@ -59,6 +59,9 @@ export default function DraftRecovery({
           These fields changed in another tab. Other changes will be combined.
           Nothing is replaced until you choose.
         </p>
+        {draft.error && draft.error.code !== "DRAFT_CONFLICT" && (
+          <p role="alert">{draft.error.message}</p>
+        )}
         {draft.review.conflicts.map((conflict) => (
           <div className="draft-conflict" key={conflict.key}>
             <h3>{labels[conflict.key]}</h3>

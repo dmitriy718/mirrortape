@@ -155,13 +155,20 @@ export function useDraft(initial: SavedDraft, session: Session) {
         current.current,
         fresh.data,
       );
-      if (merged.conflicts.length)
+      if (merged.conflicts.length) {
+        setError(
+          new ApiError(
+            "Another tab saved changes first. Review both versions to keep the changes you want.",
+            "DRAFT_CONFLICT",
+            409,
+          ),
+        );
         setReview({
           fresh,
           local: current.current,
           conflicts: merged.conflicts,
         });
-      else await accept(fresh, merged.data);
+      } else await accept(fresh, merged.data);
     } catch (cause) {
       setError(
         cause instanceof ApiError

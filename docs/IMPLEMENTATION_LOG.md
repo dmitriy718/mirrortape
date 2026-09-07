@@ -84,3 +84,5 @@ Local final regression: lint/build, 43 backend/unit tests, 72 Chromium cases, ni
 Visual follow-up found the sticky navigation could cover the newly opened comparison heading. The comparison now receives keyboard focus and scrolls below the measured navigation height. Both viewport cases passed focused assertions for heading position, focus, overflow and axe checks after the fix; desktop/mobile artifacts were generated and reviewed.
 
 The final public status review replaced raw parser/timeout messages with a plain-language service/connection recovery message. Desktop/mobile tests now inject both HTTP 503 and malformed JSON before verifying successful recovery. Both cases, lint and build passed locally.
+
+Conflict review now also exposes a failed refresh instead of hiding its error behind an existing comparison. Recovery clears that error after a successful comparison, and the server's conflict message directs users to review their changes. Desktop/mobile tests verify editing during comparison, an injected 503, successful retry and persistence of the latest text. Lint/build and both targeted cases passed.
