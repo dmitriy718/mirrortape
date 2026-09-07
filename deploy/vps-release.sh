@@ -56,7 +56,7 @@ for tool in docker git curl python3 caddy systemctl flock install sha256sum; do 
 [[ $EUID -eq 0 ]] || fail 'Use the provisioned root deployment operator.'
 run docker info --format '{{.ServerVersion}}'
 run docker compose version
-[[ -z $(git -c safe.directory="$repo" -C "$repo" status --porcelain) ]] || fail 'Source checkout contains uncommitted changes.'
+[[ -z $(git --no-optional-locks -c safe.directory="$repo" -C "$repo" status --porcelain) ]] || fail 'Source checkout contains uncommitted changes.'
 commit=$(git -c safe.directory="$repo" -C "$repo" rev-parse HEAD) || fail 'Commit unavailable.'
 [[ "$commit" =~ ^[a-f0-9]{40}$ ]] || fail 'Invalid commit.'
 for file in app.env postgres.env releases.env upstream.caddy; do [[ -f "$config/$file" ]] || fail "Provision $config/$file first."; done

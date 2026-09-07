@@ -38,7 +38,7 @@ def main():
     commit = subprocess.check_output(['git', '-c', f'safe.directory={repo}', '-C', str(repo), 'rev-parse', 'HEAD'], text=True).strip()
     if len(commit) != 40 or any(c not in '0123456789abcdef' for c in commit):
         raise RuntimeError('Invalid release commit.')
-    if subprocess.check_output(['git', '-c', f'safe.directory={repo}', '-C', str(repo), 'status', '--porcelain'], text=True).strip():
+    if subprocess.check_output(['git', '--no-optional-locks', '-c', f'safe.directory={repo}', '-C', str(repo), 'status', '--porcelain'], text=True).strip():
         raise RuntimeError('Source must be clean.')
     caddyfile = Path('/etc/caddy/Caddyfile')
     if 'import /etc/caddy/sites/*.caddy' not in caddyfile.read_text():
