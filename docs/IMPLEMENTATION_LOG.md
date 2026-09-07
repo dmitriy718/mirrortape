@@ -64,3 +64,9 @@ Publication verified: application commit `893bb73d4c6957950c355bde647769aad557d7
 - Added persisted public contact drafts and request references, safe retries without duplicate cases, versioned signup agreement records and OAuth-state-bound agreement for new social accounts.
 - Fixed the journal caption contrast defect found by Chromium/axe, a test metadata iterator mistake, development-mode leakage into local production builds, and compatibility of stored draft reads across additive releases.
 - Local gates passed: 39 integration/security tests, 62 Chromium cases, lint/build, zero audit findings and 48 public runtime smoke checks. Company/policy content, release compatibility and remaining operational/legal review are documented in PUBLIC_SITE.md. Production release evidence follows after CI and VPS verification.
+
+### Public-site release completed
+
+- Compatibility `e3940c5` and full application `6bfdd59` passed their exact Linux CI runs and deployed through the existing blue/green pipeline. The full release is active in blue; the retained compatibility release stopped with exit code 0.
+- Observed 20 then 22 continuous public HTTPS probes with zero failures across both switches; backups were validated before each release. All twelve unrelated CodexStore containers remain healthy.
+- Final production smoke passed 48 desktop/mobile route checks with zero console errors. Company identity, actual policy HTML, status gates, security headers and private-route separation were checked on mirrortape.net. Full evidence and remaining launch requirements are in VERIFICATION.md.
