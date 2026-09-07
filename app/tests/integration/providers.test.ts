@@ -55,6 +55,9 @@ async function member() {
     session.user.id,
     `${randomUUID()}@example.com`,
   ]);
+  await db.query("UPDATE sessions SET authenticated=true WHERE user_id=$1", [
+    session.user.id,
+  ]);
   return {
     session,
     headers: {

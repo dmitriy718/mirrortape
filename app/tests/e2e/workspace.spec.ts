@@ -40,6 +40,10 @@ test.beforeEach(async () => {
 });
 test.afterAll(async () => db.end());
 async function openWorkspace(page: Page) {
+  const fixture = await (await page.request.get("/api/session")).json();
+  await db.query("UPDATE sessions SET authenticated=true WHERE user_id=$1", [
+    fixture.user.id,
+  ]);
   await page.goto("/app");
   await expect(
     page.getByRole("heading", { name: "Make your next move deliberate." }),
@@ -65,9 +69,9 @@ test("F09/F16/F18/F19 landing, guest entry, typography and responsive layout", a
   expect(
     await nav.evaluate((e) => getComputedStyle(e).backdropFilter),
   ).toContain("blur");
-  await page.getByRole("link", { name: "Explore your workspace" }).click();
+  await page.getByRole("link", { name: "Explore the demo" }).click();
   await expect(
-    page.getByRole("heading", { name: "Your focus, narrowed." }),
+    page.getByRole("heading", { name: "A watchlist you can shape." }),
   ).toBeVisible();
   expect(
     await page.evaluate(
@@ -170,6 +174,10 @@ test("F02 undo survives reload and deletion commits after the server deadline", 
 test("F03/F17 genuine loading steps and skeleton precede API completion", async ({
   page,
 }) => {
+  const fixture = await (await page.request.get("/api/session")).json();
+  await db.query("UPDATE sessions SET authenticated=true WHERE user_id=$1", [
+    fixture.user.id,
+  ]);
   let release: () => void = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -404,19 +412,26 @@ test("real email queue, verification, guest upgrade, sign-in and recovery", asyn
   page,
 }) => {
   const email = `browser-${randomUUID()}@example.com`;
-  await openWorkspace(page);
-  await page.getByRole("textbox", { name: "Stock symbol" }).fill("NVDA");
-  await page.getByRole("button", { name: "Add symbol", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Remove NVDA" })).toBeVisible();
-  await page.getByRole("link", { name: "Keep my workspace" }).click();
-  await page.getByRole("textbox", { name: "Email address" }).fill(email);
+  await page.goto("/demo");
   await page
-    .getByLabel("Password", { exact: true })
+    .getByRole("textbox", { name: "Demo research note (optional)" })
+    .fill("This stays in the demo.");
+  await page.getByRole("link", { name: "Create my private dashboard" }).click();
+  await page
+    .getByRole("textbox", { name: "Email address (required)" })
+    .fill(email);
+  await page
+    .getByLabel("Password (required)", { exact: true })
     .fill("A long unique test password");
   await page
     .getByRole("button", { name: "Create account", exact: true })
     .click();
-  await expect(page.getByText(/If this email can be registered/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Sign out", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("textbox", { name: "Stock symbol" }).fill("NVDA");
+  await page.getByRole("button", { name: "Add symbol", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Remove NVDA" })).toBeVisible();
   let mail = "";
   await expect
     .poll(async () => {
@@ -441,21 +456,25 @@ test("real email queue, verification, guest upgrade, sign-in and recovery", asyn
   await expect(page.getByText("Email verified", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(
-    page.getByRole("link", { name: "Keep my workspace" }),
+    page.getByRole("link", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await page.goto("/app/login");
-  await page.getByRole("textbox", { name: "Email address" }).fill(email);
   await page
-    .getByLabel("Password", { exact: true })
+    .getByRole("textbox", { name: "Email address (required)" })
+    .fill(email);
+  await page
+    .getByLabel("Password (required)", { exact: true })
     .fill("A long unique test password");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByRole("button", { name: "Remove NVDA" })).toBeVisible();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(
-    page.getByRole("link", { name: "Keep my workspace" }),
+    page.getByRole("link", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await page.goto("/app/recover");
-  await page.getByRole("textbox", { name: "Email address" }).fill(email);
+  await page
+    .getByRole("textbox", { name: "Email address (required)" })
+    .fill(email);
   await page
     .getByRole("button", { name: "Send recovery link", exact: true })
     .click();
@@ -481,16 +500,18 @@ test("real email queue, verification, guest upgrade, sign-in and recovery", asyn
   expect(reset).toBeTruthy();
   await page.goto(`/app/reset#token=${reset}`);
   await page
-    .getByLabel("Password", { exact: true })
+    .getByLabel("Password (required)", { exact: true })
     .fill("My replacement test password");
   await page
     .getByRole("button", { name: "Reset password", exact: true })
     .click();
   await expect(page.getByText(/Your password has been reset/)).toBeVisible();
   await page.getByRole("link", { name: "Go to sign in" }).click();
-  await page.getByRole("textbox", { name: "Email address" }).fill(email);
   await page
-    .getByLabel("Password", { exact: true })
+    .getByRole("textbox", { name: "Email address (required)" })
+    .fill(email);
+  await page
+    .getByLabel("Password (required)", { exact: true })
     .fill("My replacement test password");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByRole("button", { name: "Remove NVDA" })).toBeVisible();
@@ -505,9 +526,9 @@ test("F04 navigation flushes a fresh edit before leaving the workspace", async (
   await page
     .getByRole("textbox", { name: "Notes to your future self" })
     .fill("Save this before navigation.");
-  await page.getByRole("link", { name: "Keep my workspace" }).click();
+  await page.getByRole("link", { name: "Pricing", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Keep your workspace." }),
+    page.getByRole("heading", { name: "Start with a free workspace." }),
   ).toBeVisible();
   await page.goto("/app");
   await expect(
@@ -638,4 +659,119 @@ test("F02 undo countdown follows server time when the device clock is wrong", as
   await expect(page.getByText(/Undo within [1-5] seconds/)).toBeVisible();
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByRole("button", { name: "Remove AMD" })).toBeVisible();
+});
+
+test("public demo, private dashboard and account navigation are separate", async ({
+  page,
+}) => {
+  await page.goto("/app");
+  await expect(page).toHaveURL(/\/app\/login$/);
+  await expect(
+    page.getByRole("heading", { name: "Welcome back." }),
+  ).toBeVisible();
+  await page.goto("/demo");
+  await expect(page.getByText("DEMO DASHBOARD · PRACTICE ONLY")).toBeVisible();
+  await page
+    .getByRole("textbox", { name: "Demo research note (optional)" })
+    .fill("Keep this only in the demo");
+  await openWorkspace(page);
+  await expect(
+    page.getByText("PRIVATE DASHBOARD · YOUR ACCOUNT"),
+  ).toBeVisible();
+  await goToNotes(page);
+  await expect(
+    page.getByRole("textbox", { name: "Notes to your future self" }),
+  ).toHaveValue("");
+  await page
+    .getByRole("textbox", { name: "Notes to your future self" })
+    .fill("Private research");
+  await saved(page);
+  await page.goto("/demo");
+  await expect(
+    page.getByRole("textbox", { name: "Demo research note (optional)" }),
+  ).toHaveValue("Keep this only in the demo");
+  await expect(page.getByText("Private research", { exact: true })).toHaveCount(
+    0,
+  );
+});
+test("five public pages have distinct signup CTAs, hidden from signed-in clients", async ({
+  page,
+}) => {
+  const pages = [
+    ["/", "Create my free account"],
+    ["/how-it-works", "Build my first watchlist"],
+    ["/pricing", "Start with the free plan"],
+    ["/risk", "Create my trading plan"],
+    ["/faq", "Turn answers into action"],
+  ];
+  for (const [path, label] of pages) {
+    await page.goto(path);
+    await expect(
+      page
+        .getByRole("region", { name: "Next step" })
+        .getByRole("link", { name: label }),
+    ).toHaveAttribute("href", "/app/register");
+  }
+  await openWorkspace(page);
+  await page.goto("/pricing");
+  await expect(
+    page.getByRole("link", { name: "Dashboard", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("region", { name: "Next step" })).toHaveCount(0);
+});
+test("signup provides provider choices and accessible password guidance", async ({
+  page,
+}) => {
+  await page.goto("/app/register");
+  await expect(
+    page.getByRole("heading", { name: "Create your private dashboard." }),
+  ).toBeVisible();
+  for (const provider of ["Google", "Apple", "Facebook"])
+    await expect(
+      page.getByRole("button", {
+        name: new RegExp(`Continue with ${provider}`),
+      }),
+    ).toBeDisabled();
+  const password = page.getByLabel("Password (required)", { exact: true });
+  await password.fill("A long private test password");
+  await page
+    .getByRole("button", { name: "Show password", exact: true })
+    .click();
+  await expect(password).toHaveAttribute("type", "text");
+  await page
+    .getByRole("button", { name: "Hide password", exact: true })
+    .click();
+  await expect(password).toHaveAttribute("type", "password");
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .analyze();
+  expect(results.violations.map((v) => v.id)).toEqual([]);
+});
+test("exit invitation respects timing, dismissal, keyboard and mobile behavior", async ({
+  page,
+}, testInfo) => {
+  await page.clock.install();
+  await page.goto("/");
+  await expect(page.getByRole("region", { name: "Next step" })).toBeVisible();
+  const leave = () =>
+    page.evaluate(() =>
+      document.dispatchEvent(
+        new MouseEvent("mouseout", { clientY: 0, relatedTarget: null }),
+      ),
+    );
+  await leave();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await page.clock.fastForward(16000);
+  await leave();
+  if (testInfo.project.name === "chromium-mobile") {
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+    return;
+  }
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await page.goto("/faq");
+  await page.clock.fastForward(16000);
+  await leave();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
 });

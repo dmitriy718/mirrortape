@@ -1,7 +1,23 @@
-import { Component, type ReactNode, useState, useId } from "react";
-import { Link } from "react-router";
+import { Component, type ReactNode, useState, useId, useEffect } from "react";
+import { PageCTA, ExitIntent } from "./Conversion";
+import { api } from "./api";
+import { Link, useLocation } from "react-router";
 import ThemeControl from "./ThemeControl";
 export function Shell({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    void api<{ authenticated: boolean }>("/api/auth/status", {
+      signal: controller.signal,
+    })
+      .then((result) => setSignedIn(result.authenticated))
+      .catch(() => {
+        if (!controller.signal.aborted) setSignedIn(null);
+      });
+    return () => controller.abort();
+  }, [pathname]);
+  const privateView = pathname === "/app";
   return (
     <div className="product">
       <a className="skip-link" href="#main">
@@ -13,13 +29,36 @@ export function Shell({ children }: { children: ReactNode }) {
           MIRROR<span>TAPE</span>
         </Link>
         <nav aria-label="Main navigation">
-          <Link to="/app">Workspace</Link>
+          {privateView ? (
+            <Link to="/app">My dashboard</Link>
+          ) : (
+            <Link to="/demo">Demo dashboard</Link>
+          )}
+          {!privateView && <Link to="/how-it-works">How it works</Link>}
+          {signedIn ? (
+            <Link to="/app">Dashboard</Link>
+          ) : (
+            <Link to="/app/login">Sign in</Link>
+          )}
           <Link to="/pricing">Pricing</Link>
           <Link to="/support">Help</Link>
         </nav>
         <ThemeControl />
       </header>
-      <main id="main">{children}</main>
+      <main id="main">
+        {privateView && (
+          <div className="dashboard-label">
+            PRIVATE DASHBOARD · YOUR ACCOUNT
+          </div>
+        )}
+        {children}
+        {signedIn === false && !pathname.startsWith("/app") && (
+          <div className="content-width">
+            <PageCTA />
+          </div>
+        )}
+      </main>
+      {signedIn === false && !pathname.startsWith("/app") && <ExitIntent />}
       <footer className="product-footer">
         <span>© {new Date().getFullYear()} MirrorTape</span>
         <span>Stocks & options. Your decisions, clearly recorded.</span>

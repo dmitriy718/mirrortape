@@ -1,6 +1,6 @@
 # MirrorTape VPS release runbook
 
-**Prepared and partially verified locally. No VPS has been inspected or changed.** Do not import this configuration over an existing server without first reviewing its current sites, services, database and backups. Public deployment needs the owner's explicit production authorization and configured provider accounts.
+**Alternative host-Node/systemd deployment. The selected VPS uses the [isolated Docker deployment](VPS_DOCKER.md); follow that runbook for codexstore@65.75.201.59.** Do not import this configuration over an existing server without first reviewing its current sites, services, database and backups. Public deployment needs the owner's explicit production authorization and configured provider accounts.
 
 ## Layout and prerequisites
 

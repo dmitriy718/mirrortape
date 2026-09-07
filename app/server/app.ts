@@ -1,4 +1,6 @@
 import Fastify from "fastify";
+import formbody from "@fastify/formbody";
+import { socialRoutes } from "./routes/social.js";
 import cookie from "@fastify/cookie";
 import helmet from "@fastify/helmet";
 import assets from "@fastify/static";
@@ -18,7 +20,9 @@ export async function buildApp(ctx: Context, backgroundJobs = true) {
     requestTimeout: 15000,
     connectionTimeout: 15000,
     keepAliveTimeout: 5000,
-    trustProxy: ctx.config.TRUST_PROXY === "loopback" ? "loopback" : false,
+    trustProxy:
+      ctx.config.TRUST_PROXY_ADDRESS ??
+      (ctx.config.TRUST_PROXY === "loopback" ? "loopback" : false),
     logger: {
       serializers: {
         req: (r) => ({ method: r.method, path: r.url?.split("?")[0] }),
@@ -33,6 +37,7 @@ export async function buildApp(ctx: Context, backgroundJobs = true) {
     },
   });
   await app.register(cookie);
+  await app.register(formbody);
   await app.register(helmet, {
     contentSecurityPolicy: {
       directives: {
@@ -143,7 +148,7 @@ export async function buildApp(ctx: Context, backgroundJobs = true) {
     if (!ready) return reply.code(503).send({ status: "draining" });
     const schema = await ctx.db.query(
       "SELECT name FROM schema_migrations WHERE name=$1",
-      ["001_core.sql"],
+      ["002_social_auth.sql"],
     );
     if (!schema.rowCount)
       return reply.code(503).send({ status: "schema_missing" });
@@ -151,6 +156,7 @@ export async function buildApp(ctx: Context, backgroundJobs = true) {
   });
   await workspaceRoutes(app, ctx);
   await authRoutes(app, ctx);
+  await socialRoutes(app, ctx);
   await providerRoutes(app, ctx);
   await billingRoutes(app, ctx);
   if (backgroundJobs) jobs(app, ctx);

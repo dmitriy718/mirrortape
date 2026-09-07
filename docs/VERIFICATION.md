@@ -65,3 +65,11 @@ Password hashing uses scrypt N=32768, r=8, p=3 with an explicit memory ceiling a
 4. **VPS and resilience:** inspect the actual OS/topology/resources; provision reviewed secrets/DNS/TLS/proxy/service permissions; execute migrations with approved backups; run successful and failing release/rollback probes, reboot/graceful-drain checks, load/soak tests, alerts, off-site backups and disaster-recovery drills. No production infrastructure, billing settings or credentials have been changed.
 
 These gaps are material. No “SYSTEM PRODUCTION-READY” assertion is warranted.
+
+## September 7 — accounts, public demo and deployment increment
+
+The demo and private dashboard are now separate routes and data stores. `/app` requires an authenticated session, and private watchlist/brokerage APIs enforce authentication. New email/password accounts can use the dashboard while awaiting email verification. Google/Apple/Facebook authorization-code integrations use provider-bound identities, signed token verification where applicable, explicit linking for email collisions, and rotated sessions. Credentials and live-provider acceptance remain external requirements. See [provider setup](SOCIAL_AUTH_SETUP.md).
+
+Public visitors receive distinct CTAs on at least five pages, a timed/session-capped desktop exit invitation, an interactive demo, clearer signup guidance and progressive onboarding. [Research and qualifications](CONVERSION_RESEARCH.md). New tests cover all three providers with deterministic external responses, nonce/audience/browser binding, identity collision, token ownership, revoked sessions, protected routes, demo isolation, CTAs and modal behavior. The first expanded local run passed 31 backend/security tests and 50 Chromium cases; final deployment evidence is recorded in the implementation log.
+
+The inspected VPS runs existing CodexStore services and host Node 20. The new Docker deployment definition isolates MirrorTape's Node 24 runtime and PostgreSQL database, preserves Caddy's existing sites, stages blue/green releases, retains hashed assets and takes a verified pre-migration backup. Public HTTPS depends on the owner's DNS change.

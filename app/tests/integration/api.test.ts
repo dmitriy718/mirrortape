@@ -25,13 +25,16 @@ afterAll(async () => {
 beforeEach(async () => {
   await db.query("DELETE FROM rate_windows");
 });
-async function guest() {
+async function account() {
   const r = await app.inject({ url: "/api/session" });
   expect(r.statusCode).toBe(200);
   const cookie = r.headers["set-cookie"]?.toString().split(";")[0] ?? "";
+  await db.query("UPDATE sessions SET authenticated=true WHERE user_id=$1", [
+    r.json().user.id,
+  ]);
   return { cookie, session: r.json() };
 }
-function headers(g: Awaited<ReturnType<typeof guest>>) {
+function headers(g: Awaited<ReturnType<typeof account>>) {
   return {
     cookie: g.cookie,
     origin: config.APP_ORIGIN,
@@ -40,7 +43,7 @@ function headers(g: Awaited<ReturnType<typeof guest>>) {
 }
 describe("real PostgreSQL API boundaries", () => {
   it("F15 requires origin and session-bound CSRF on every browser mutation", async () => {
-    const g = await guest();
+    const g = await account();
     for (const endpoint of [
       "/api/draft",
       "/api/watchlist",
@@ -56,7 +59,7 @@ describe("real PostgreSQL API boundaries", () => {
       });
       expect(r.statusCode).toBe(403);
     }
-    const other = await guest();
+    const other = await account();
     const r = await app.inject({
       method: "POST",
       url: "/api/watchlist",
@@ -66,7 +69,7 @@ describe("real PostgreSQL API boundaries", () => {
     expect(r.statusCode).toBe(403);
   });
   it("F04 prevents concurrent lost updates, and scopes drafts by owner", async () => {
-    const g = await guest();
+    const g = await account();
     const initial = (
       await app.inject({ url: "/api/draft", headers: headers(g) })
     ).json();
@@ -81,14 +84,14 @@ describe("real PostgreSQL API boundaries", () => {
       ),
     );
     expect(results.map((r) => r.statusCode).sort()).toEqual([200, 409]);
-    const other = await guest();
+    const other = await account();
     expect(
       (await app.inject({ url: "/api/draft", headers: headers(other) })).json()
         .data.note,
     ).toBe("");
   });
   it("F11 honeypots accept neutrally without side effects", async () => {
-    const g = await guest();
+    const g = await account();
     const r = await app.inject({
       method: "POST",
       url: "/api/watchlist",
@@ -102,7 +105,7 @@ describe("real PostgreSQL API boundaries", () => {
     ).toHaveLength(0);
   });
   it("F14 rejects markup, unknown keys, prototype poisoning and oversized bodies", async () => {
-    const g = await guest();
+    const g = await account();
     for (const payload of [
       { symbol: "<script>" },
       { symbol: "AAPL", admin: true },
@@ -139,8 +142,8 @@ describe("real PostgreSQL API boundaries", () => {
     ).toBe(413);
   });
   it("F02 enforces undo deadline and tenant isolation on the server", async () => {
-    const g = await guest();
-    const other = await guest();
+    const g = await account();
+    const other = await account();
     const item = (
       await app.inject({
         method: "POST",
@@ -212,7 +215,7 @@ describe("real PostgreSQL API boundaries", () => {
     expect(await slidingLimit({ db, config }, key, 3, 10)).toBeGreaterThan(15);
   });
   it("F12 endpoint limits return 429 and Retry-After, ignoring spoofed IP headers", async () => {
-    const g = await guest();
+    const g = await account();
     const results = [];
     for (let i = 0; i < 17; i++)
       results.push(
@@ -231,7 +234,9 @@ describe("real PostgreSQL API boundaries", () => {
   });
   it("F08 capacity reservations cannot oversell under concurrent requests", async () => {
     await db.query("DELETE FROM cohort_reservations");
-    const guests = await Promise.all(Array.from({ length: 6 }, () => guest()));
+    const guests = await Promise.all(
+      Array.from({ length: 6 }, () => account()),
+    );
     for (const g of guests)
       await db.query("UPDATE users SET verified=true,email=$2 WHERE id=$1", [
         g.session.user.id,
@@ -253,7 +258,7 @@ describe("real PostgreSQL API boundaries", () => {
   });
   it("F06 activity is opt-in, time-bounded and privacy-thresholded", async () => {
     await db.query("DELETE FROM activity");
-    const g = await guest();
+    const g = await account();
     await app.inject({
       method: "POST",
       url: "/api/activity",
@@ -280,7 +285,7 @@ describe("real PostgreSQL API boundaries", () => {
     ).toBeNull();
   });
   it("provider and guest gates fail honestly without fabricated success", async () => {
-    const g = await guest();
+    const g = await account();
     expect(
       (
         await app.inject({
@@ -323,7 +328,7 @@ describe("real PostgreSQL API boundaries", () => {
   });
   it("unknown pages have real 404 status and API errors contain no secrets", async () => {
     expect((await app.inject({ url: "/unknown" })).statusCode).toBe(404);
-    const g = await guest();
+    const g = await account();
     const r = await app.inject({ url: "/api/unknown", headers: headers(g) });
     expect(r.statusCode).toBe(404);
     expect(r.body).not.toContain(config.SESSION_SECRET);

@@ -7,6 +7,7 @@ export type Identity = {
   sessionToken: string;
   email: string | null;
   verified: boolean;
+  authenticated: boolean;
 };
 declare module "fastify" {
   interface FastifyRequest {

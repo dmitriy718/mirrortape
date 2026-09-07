@@ -9,6 +9,9 @@ import { transaction } from "../db.js";
 import { cookieName, newSession, slidingLimit } from "../security.js";
 export async function authRoutes(app: FastifyInstance, ctx: Context) {
   const { db, config } = ctx;
+  app.get("/api/auth/status", async (request) => ({
+    authenticated: request.identity.authenticated,
+  }));
   const dummyHash = await passwordHash(token());
   app.post("/api/auth/register", async (request, reply) => {
     const body = z
@@ -16,7 +19,6 @@ export async function authRoutes(app: FastifyInstance, ctx: Context) {
       .strict()
       .parse(request.body);
     if (body.website) return reply.code(202).send({ accepted: true });
-    if (!config.SMTP_URL) throw unavailable("Account registration");
     const wait = await slidingLimit(ctx, `email:${hash(body.email)}`, 4, 3600);
     if (wait)
       throw new AppError(
@@ -27,7 +29,7 @@ export async function authRoutes(app: FastifyInstance, ctx: Context) {
       );
     const encoded = await passwordHash(body.password);
     const verification = token();
-    await transaction(db, async (client) => {
+    const created = await transaction(db, async (client) => {
       await client.query(
         "SELECT pg_advisory_xact_lock(hashtextextended($1,0))",
         [`register:${body.email}`],
@@ -46,27 +48,41 @@ export async function authRoutes(app: FastifyInstance, ctx: Context) {
         "SELECT id FROM users WHERE email=$1",
         [body.email],
       );
-      if (existing.rowCount) return;
+      if (existing.rowCount) return false;
       await client.query(
         "UPDATE users SET email=$2,password_hash=$3 WHERE id=$1",
         [request.identity.userId, body.email, encoded],
       );
-      await client.query(
-        "INSERT INTO auth_tokens(token_hash,user_id,purpose,expires_at) VALUES($1,$2,'verify',now()+interval '30 minutes')",
-        [hash(verification), request.identity.userId],
-      );
-      const message = `Verify your MirrorTape email by opening ${config.APP_ORIGIN}/app/verify#token=${verification}\nThis link expires in 30 minutes. If you did not request it, ignore this email.`;
-      await client.query(
-        "INSERT INTO email_outbox(id,recipient,subject,encrypted_body) VALUES($1,$2,$3,$4)",
-        [
-          randomUUID(),
-          body.email,
-          "Verify your MirrorTape email",
-          seal(message, config.ENCRYPTION_KEY),
-        ],
-      );
+      if (config.SMTP_URL) {
+        await client.query(
+          "INSERT INTO auth_tokens(token_hash,user_id,purpose,expires_at) VALUES($1,$2,'verify',now()+interval '30 minutes')",
+          [hash(verification), request.identity.userId],
+        );
+        const message = `Verify your MirrorTape email by opening ${config.APP_ORIGIN}/app/verify#token=${verification}\nThis link expires in 30 minutes. If you did not request it, ignore this email.`;
+        await client.query(
+          "INSERT INTO email_outbox(id,recipient,subject,encrypted_body) VALUES($1,$2,$3,$4)",
+          [
+            randomUUID(),
+            body.email,
+            "Verify your MirrorTape email",
+            seal(message, config.ENCRYPTION_KEY),
+          ],
+        );
+      }
+      return true;
     });
+    if (created) {
+      await newSession(
+        ctx,
+        request.identity.userId,
+        reply,
+        true,
+        request.identity.sessionHash,
+      );
+    }
     return {
+      created,
+      verificationAvailable: Boolean(config.SMTP_URL),
       accepted: true,
       message:
         "If this email can be registered, a verification link will arrive shortly. Check your inbox or sign in to your existing account.",
@@ -177,17 +193,23 @@ export async function authRoutes(app: FastifyInstance, ctx: Context) {
         "LOGIN_FAILED",
         "The email or password does not match. Check them or reset your password.",
       );
+    let currentHash = user.password_hash as string;
     if (!user.password_hash.startsWith("scrypt-v1:")) {
       const upgraded = await passwordHash(body.password);
+      currentHash = upgraded;
       await db.query(
         "UPDATE users SET password_hash=$2 WHERE id=$1 AND password_hash=$3",
         [user.id, upgraded, user.password_hash],
       );
     }
-    await db.query("DELETE FROM sessions WHERE token_hash=$1", [
+    await newSession(
+      ctx,
+      user.id,
+      reply,
+      true,
       request.identity.sessionHash,
-    ]);
-    await newSession(ctx, user.id, reply);
+      currentHash,
+    );
     await db.query(
       "INSERT INTO audit_events(user_id,action) VALUES($1,'signed_in')",
       [user.id],

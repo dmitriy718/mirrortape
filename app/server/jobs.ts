@@ -24,6 +24,7 @@ export function jobs(app: FastifyInstance, ctx: Context) {
     : null;
   let running: Promise<void> | null = null;
   const tick = async () => {
+    await ctx.db.query("DELETE FROM social_auth_states WHERE expires_at<now()");
     await ctx.db.query("DELETE FROM watchlist WHERE delete_at<=now()");
     await ctx.db.query("DELETE FROM sessions WHERE expires_at<now()");
     await ctx.db.query(

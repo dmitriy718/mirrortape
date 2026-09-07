@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useLocation } from "react-router";
+import SocialButtons from "./SocialButtons";
+import { Link, useLocation, Navigate } from "react-router";
 import { api, type Session, type SavedDraft } from "./api";
 import { useDraft } from "./useDraft";
 import { Shell, Recovery, Honeypot, Progress } from "./Primitives";
@@ -49,8 +50,23 @@ function AuthForm({
   const { pathname } = useLocation();
   const kind = pathname.split("/").at(-1) ?? "login";
   const draft = useDraft(initial, session);
+  const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState(""),
-    [error, setError] = useState(""),
+    [error, setError] = useState(() => {
+      const errors: Record<string, string> = {
+        failed:
+          "Sign-in could not be verified. Try again or use your email and password.",
+        cancelled:
+          "Sign-in was cancelled. You can try again whenever you are ready.",
+        account_exists:
+          "An account already uses this email. Sign in with its existing method, then connect this provider from Account & billing.",
+        linked_elsewhere:
+          "This provider is already connected to another account. Use that account or choose another sign-in method.",
+      };
+      return (
+        errors[new URLSearchParams(location.search).get("auth") ?? ""] ?? ""
+      );
+    }),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false);
   const [linkToken] = useState(
@@ -61,7 +77,7 @@ function AuthForm({
       history.replaceState(null, "", location.pathname + location.search);
   }, []);
   const titles: Record<string, string> = {
-    register: "Keep your workspace.",
+    register: "Create your private dashboard.",
     login: "Welcome back.",
     recover: "Let’s get you back in.",
     reset: "Choose a new password.",
@@ -86,13 +102,16 @@ function AuthForm({
             : ["recover", "resend"].includes(kind)
               ? { email: draft.data.email, website }
               : { email: draft.data.email, password, website };
-      const result = await api<{ message?: string }>(`/api/auth/${kind}`, {
-        method: "POST",
-        csrf: session.csrf,
-        body,
-      });
+      const result = await api<{ message?: string; created?: boolean }>(
+        `/api/auth/${kind}`,
+        {
+          method: "POST",
+          csrf: session.csrf,
+          body,
+        },
+      );
       setPassword("");
-      if (kind === "login") {
+      if (kind === "login" || (kind === "register" && result.created)) {
         location.assign("/app");
         return;
       }
@@ -108,15 +127,27 @@ function AuthForm({
       setBusy(false);
     }
   }
+  if (
+    session.user.authenticated &&
+    ["login", "register"].includes(kind) &&
+    !new URLSearchParams(location.search).has("auth")
+  )
+    return <Navigate to="/app" replace />;
   return (
     <div className="panel auth-panel">
       <p className="eyebrow">MIRRORTAPE ACCOUNT</p>
       <h1>{titles[kind] ?? "Your account"}</h1>
       <p className="muted">
         {kind === "register"
-          ? "Your guest plan stays with you. We’ll send a link to verify your email."
+          ? "Start free with your email and a password, or continue with a sign-in provider. No card required."
           : "Your account details stay between you and MirrorTape."}
       </p>
+      {["login", "register"].includes(kind) && (
+        <>
+          <SocialButtons session={session} beforeStart={draft.flush} />
+          <p className="auth-divider">or use your email</p>
+        </>
+      )}
       {busy && (
         <Progress
           steps={[
@@ -143,7 +174,7 @@ function AuthForm({
           <Honeypot />
           {needEmail && (
             <div className="field">
-              <label htmlFor="auth-email">Email address</label>
+              <label htmlFor="auth-email">Email address (required)</label>
               <input
                 id="auth-email"
                 type="email"
@@ -158,11 +189,11 @@ function AuthForm({
           )}
           {needPassword && (
             <div className="field">
-              <label htmlFor="auth-password">Password</label>
+              <label htmlFor="auth-password">Password (required)</label>
               <input
                 id="auth-password"
                 name="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 minLength={kind === "login" ? 1 : 15}
                 maxLength={128}
@@ -172,6 +203,14 @@ function AuthForm({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <button
+                type="button"
+                className="text-button password-toggle"
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword((value) => !value)}
+              >
+                {showPassword ? "Hide password" : "Show password"}
+              </button>
               {kind !== "login" && (
                 <small>
                   At least 15 characters. Passwords are never saved as drafts.
@@ -224,7 +263,7 @@ function AuthForm({
         />
       )}
       <div className="auth-links">
-        <Link to="/app">Continue as a guest</Link>
+        <Link to="/demo">Explore the demo</Link>
         <Link to="/app/resend">Resend verification email</Link>
         {kind !== "login" && (
           <Link to="/app/login">Already have an account?</Link>

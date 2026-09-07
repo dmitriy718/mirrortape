@@ -29,8 +29,8 @@ export function Landing() {
               considered workspace. Start with what matters to you.
             </p>
             <div className="button-row">
-              <Link className="primary-button large" to="/app">
-                Explore your workspace <ArrowUpRight size={19} />
+              <Link className="primary-button large" to="/demo">
+                Explore the demo <ArrowUpRight size={19} />
               </Link>
               <Link className="secondary-button large" to="/how-it-works">
                 See how it works
@@ -113,7 +113,7 @@ export function Landing() {
               Your first watchlist starts with one symbol.
             </p>
           </div>
-          <Link className="primary-button large" to="/app">
+          <Link className="primary-button large" to="/demo">
             Get started <ArrowRight size={18} />
           </Link>
         </section>
@@ -159,14 +159,14 @@ export function PricingPage() {
             <p className="eyebrow">WORKSPACE</p>
             <h2 className="price">$0</h2>
             <ul className="feature-list">
-              <li>Guest exploration</li>
+              <li>Interactive demo without signup</li>
               <li>Up to 50 research symbols</li>
               <li>Automatically saved planning preferences</li>
               <li>Five-second undo for watchlist removal</li>
               <li>Dark, light, and system themes</li>
             </ul>
-            <Link className="primary-button" to="/app">
-              Open free workspace
+            <Link className="primary-button" to="/demo">
+              Try the free demo
             </Link>
           </article>
           <article className="panel">
@@ -182,7 +182,7 @@ export function PricingPage() {
                 : "You can use the free workspace. We are not collecting payments for live copy trading."}
             </p>
             {price?.available && (
-              <Link to="/app" className="primary-button">
+              <Link to="/demo" className="primary-button">
                 Review membership
               </Link>
             )}
@@ -241,7 +241,7 @@ const articles: Record<
     sections: [
       {
         title: "Do I need an account?",
-        text: "You can explore with a guest session. Create and verify an account to associate your workspace with an email. Guest sessions expire after seven days.",
+        text: "The demo needs no account and keeps practice changes in your browser tab. Create an account to use your separate private dashboard.",
       },
       {
         title: "Where is my work saved?",
@@ -308,8 +308,8 @@ export function InformationPage() {
             <p>{section.text}</p>
           </article>
         ))}
-        <Link className="primary-button" to="/app">
-          Go to your workspace <ArrowRight size={18} />
+        <Link className="primary-button" to="/demo">
+          Explore the demo dashboard <ArrowRight size={18} />
         </Link>
       </section>
     </Shell>

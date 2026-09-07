@@ -58,7 +58,12 @@ export async function api<T>(
 }
 export type Session = {
   csrf: string;
-  user: { id: string; email: string | null; verified: boolean };
+  user: {
+    id: string;
+    email: string | null;
+    verified: boolean;
+    authenticated: boolean;
+  };
   features: {
     email: boolean;
     billing: boolean;

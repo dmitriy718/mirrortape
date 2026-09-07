@@ -18,6 +18,7 @@ import {
   Honeypot,
   Community,
 } from "./Primitives";
+import SocialButtons from "./SocialButtons";
 import AddressField from "./AddressField";
 type Snapshot = { session: Session; draft: SavedDraft; watchlist: Watchlist };
 export default function Workspace() {
@@ -243,12 +244,12 @@ function WorkspaceContent({ initial }: { initial: Snapshot }) {
           <p className="muted">
             {session.user.verified
               ? "Your verified account"
-              : "Your guest workspace"}{" "}
+              : "Your private workspace"}{" "}
             · Your preferences and watchlist, together.
           </p>
         </div>
         <div className="session-actions">
-          {session.user.email ? (
+          {session.user.authenticated ? (
             <>
               <span className="status-pill">
                 {session.user.verified
@@ -265,7 +266,7 @@ function WorkspaceContent({ initial }: { initial: Snapshot }) {
                       csrf: session.csrf,
                       body: {},
                     });
-                    location.assign("/app");
+                    location.assign("/");
                   })
                 }
               >
@@ -279,6 +280,24 @@ function WorkspaceContent({ initial }: { initial: Snapshot }) {
           )}
         </div>
       </div>
+      <details className="panel onboarding-checklist">
+        <summary>Your getting-started checklist</summary>
+        <ul>
+          <li>
+            {items.some((item) => !item.deleteAt) ? "✓" : "○"} Add your first
+            research symbol
+          </li>
+          <li>{draft.data.note ? "✓" : "○"} Write your personal plan</li>
+          <li>
+            {session.user.verified ? "✓" : "○"} Verify your email before
+            connecting a brokerage
+          </li>
+        </ul>
+        <p className="muted small">
+          Advanced account connections are optional. Start with the research you
+          need today.
+        </p>
+      </details>
       {!draft.data.helpDismissed && (
         <Tip
           title="A workspace built around your decisions"
@@ -675,6 +694,16 @@ function WorkspaceContent({ initial }: { initial: Snapshot }) {
               Send support request
             </button>
           </form>
+        </section>
+      )}
+      {pane === "account" && (
+        <section className="panel">
+          <h2>Sign-in methods</h2>
+          <p className="muted">
+            Connect another provider while signed in. We never merge accounts
+            just because their email addresses match.
+          </p>
+          <SocialButtons session={session} link />
         </section>
       )}
       {availability?.available &&

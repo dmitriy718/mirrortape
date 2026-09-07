@@ -1,8 +1,9 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route, Navigate } from "react-router";
+import { Routes, Route } from "react-router";
 import { Landing, PricingPage, InformationPage } from "@/workspace/PublicPages";
 import { Shell, Skeleton, ErrorBoundary } from "@/workspace/Primitives";
-const Workspace = lazy(() => import("@/workspace/Workspace"));
+const Workspace = lazy(() => import("@/workspace/PrivateDashboard"));
+const DemoDashboard = lazy(() => import("@/workspace/DemoDashboard"));
 const AuthPage = lazy(() => import("@/workspace/AuthPage"));
 export default function App() {
   return (
@@ -26,7 +27,7 @@ export default function App() {
               />
             ),
           )}
-          <Route path="/demo" element={<Navigate to="/app" replace />} />
+          <Route path="/demo" element={<DemoDashboard />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="*" element={<InformationPage />} />
         </Routes>

@@ -14,6 +14,7 @@ export async function workspaceRoutes(app: FastifyInstance, ctx: Context) {
       id: request.identity.userId,
       email: request.identity.email,
       verified: request.identity.verified,
+      authenticated: request.identity.authenticated,
     },
     features: {
       email: Boolean(config.SMTP_URL),

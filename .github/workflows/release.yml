@@ -54,5 +54,5 @@ jobs:
           git fetch --no-tags origin main || fail 'Fetching the release failed.'
           git merge-base --is-ancestor "$commit" origin/main || fail 'Release is not on origin/main.'
           git switch --detach "$commit" || fail 'Could not select the tested commit.'
-          sudo -n ./deploy/deploy.sh "$repo" "$commit" --apply || fail 'Deployment failed; inspect rollback output and service logs.'
+          sudo -n ./deploy/vps-release.sh "$repo" --apply || fail 'Deployment failed; inspect rollback output and service logs.'
           REMOTE

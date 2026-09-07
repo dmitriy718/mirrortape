@@ -1,0 +1,65 @@
+name: mirrortape
+x-app: &app
+  env_file: /etc/mirrortape/app.env
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp:size=32m,mode=1777
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  mem_limit: 768m
+  pids_limit: 128
+  stop_grace_period: 35s
+  depends_on:
+    database:
+      condition: service_healthy
+  networks: [private]
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: '3'
+services:
+  database:
+    image: postgres:16-bookworm
+    env_file: /etc/mirrortape/postgres.env
+    restart: unless-stopped
+    volumes:
+      - database:/var/lib/postgresql/data
+    networks: [private]
+    mem_limit: 1g
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U mirrortape -d mirrortape']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  app-blue:
+    <<: *app
+    image: ${IMAGE_BLUE:?Configure IMAGE_BLUE}
+    environment:
+      RELEASE_ID: ${RELEASE_BLUE:?Configure RELEASE_BLUE}
+      HOST: 0.0.0.0
+      PORT: '8080'
+      TRUST_PROXY_ADDRESS: 172.30.77.1
+    ports: ['127.0.0.1:3101:8080']
+  app-green:
+    <<: *app
+    image: ${IMAGE_GREEN:?Configure IMAGE_GREEN}
+    environment:
+      RELEASE_ID: ${RELEASE_GREEN:?Configure RELEASE_GREEN}
+      HOST: 0.0.0.0
+      PORT: '8080'
+      TRUST_PROXY_ADDRESS: 172.30.77.1
+    ports: ['127.0.0.1:3102:8080']
+volumes:
+  database:
+networks:
+  private:
+    ipam:
+      config:
+        - subnet: 172.30.77.0/24

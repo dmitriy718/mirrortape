@@ -27,7 +27,7 @@ process.on("SIGINT", () => void shutdown("SIGINT"));
 try {
   const ready = await db.query(
     "SELECT name FROM schema_migrations WHERE name=$1",
-    ["001_core.sql"],
+    ["002_social_auth.sql"],
   );
   if (!ready.rowCount)
     throw new Error("Run database migrations before starting.");

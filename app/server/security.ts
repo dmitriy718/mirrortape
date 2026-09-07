@@ -11,12 +11,47 @@ export async function newSession(
   ctx: Context,
   userId: string,
   reply: FastifyReply,
+  authenticated = false,
+  previousHash?: string,
+  expectedPasswordHash?: string,
 ) {
   const secret = token();
-  await ctx.db.query(
-    "INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '7 days')",
-    [hash(secret), userId],
-  );
+  await transaction(ctx.db, async (client) => {
+    const user = await client.query(
+      "SELECT password_hash FROM users WHERE id=$1 FOR UPDATE",
+      [userId],
+    );
+    if (
+      !user.rowCount ||
+      (expectedPasswordHash !== undefined &&
+        user.rows[0].password_hash !== expectedPasswordHash)
+    )
+      throw new AppError(
+        401,
+        "AUTH_CHANGED",
+        "Your sign-in details changed. Sign in again with your current method.",
+      );
+    if (previousHash) {
+      const previous = await client.query(
+        "SELECT 1 FROM sessions WHERE token_hash=$1 AND expires_at>now() FOR UPDATE",
+        [previousHash],
+      );
+      if (!previous.rowCount)
+        throw new AppError(
+          401,
+          "SESSION_EXPIRED",
+          "Your session has ended. Reload the page and sign in again.",
+        );
+    }
+    await client.query(
+      "INSERT INTO sessions(token_hash,user_id,expires_at,authenticated) VALUES($1,$2,now()+interval '7 days',$3)",
+      [hash(secret), userId, authenticated],
+    );
+    if (previousHash)
+      await client.query("DELETE FROM sessions WHERE token_hash=$1", [
+        previousHash,
+      ]);
+  });
   reply.setCookie(cookieName(ctx.config.NODE_ENV === "production"), secret, {
     httpOnly: true,
     secure: ctx.config.NODE_ENV === "production",
@@ -26,8 +61,16 @@ export async function newSession(
   });
   return secret;
 }
+export function requireAuthenticated(request: FastifyRequest) {
+  if (!request.identity.authenticated)
+    throw new AppError(
+      401,
+      "SIGN_IN_REQUIRED",
+      "Sign in to open your private dashboard. You can explore the demo without an account.",
+    );
+}
 export function requireMember(request: FastifyRequest) {
-  if (!request.identity.verified)
+  if (!request.identity.authenticated || !request.identity.verified)
     throw new AppError(
       403,
       "VERIFY_ACCOUNT",
@@ -89,19 +132,25 @@ export async function security(app: FastifyInstance, ctx: Context) {
         "There have been too many requests. Please wait a moment and try again.",
         wait,
       );
-    if (endpoint === "/api/webhooks/stripe") return;
+    if (
+      endpoint === "/api/webhooks/stripe" ||
+      /^\/api\/auth\/social\/(google|apple|facebook)\/callback$/.test(endpoint)
+    )
+      return;
     const raw =
       request.cookies[cookieName(ctx.config.NODE_ENV === "production")];
     const sessions =
       raw && /^[a-f0-9]{64}$/.test(raw)
         ? await ctx.db.query(
-            "SELECT s.user_id,u.email,u.verified FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()",
+            "SELECT s.user_id,s.authenticated,u.email,u.verified FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()",
             [hash(raw)],
           )
         : null;
     let secret = raw ?? "";
     let user = sessions?.rows[0];
     if (!user) {
+      if (endpoint === "/api/auth/status" && request.method === "GET")
+        return reply.send({ authenticated: false });
       if (endpoint !== "/api/session" || request.method !== "GET")
         throw new AppError(
           401,
@@ -121,7 +170,12 @@ export async function security(app: FastifyInstance, ctx: Context) {
       const userId = randomUUID();
       await ctx.db.query("INSERT INTO users(id) VALUES($1)", [userId]);
       secret = await newSession(ctx, userId, reply);
-      user = { user_id: userId, email: null, verified: false };
+      user = {
+        user_id: userId,
+        email: null,
+        verified: false,
+        authenticated: false,
+      };
     }
     request.identity = {
       userId: user.user_id,
@@ -129,7 +183,15 @@ export async function security(app: FastifyInstance, ctx: Context) {
       sessionToken: secret,
       email: user.email,
       verified: user.verified,
+      authenticated: user.authenticated,
     };
+    if (
+      (endpoint.startsWith("/api/watchlist") ||
+        endpoint === "/api/audit" ||
+        endpoint.startsWith("/api/brokers")) &&
+      !request.identity.authenticated
+    )
+      requireAuthenticated(request);
     if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
       if (request.headers.origin !== ctx.config.APP_ORIGIN)
         throw new AppError(
@@ -161,7 +223,7 @@ export async function security(app: FastifyInstance, ctx: Context) {
           wait,
         );
     }
-    if (endpoint.startsWith("/api/auth/")) {
+    if (endpoint.startsWith("/api/auth/") && request.method !== "GET") {
       const wait = await slidingLimit(ctx, `auth:${fingerprint}`, 15, 600);
       if (wait)
         throw new AppError(
