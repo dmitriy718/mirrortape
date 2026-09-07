@@ -86,3 +86,10 @@ Visual follow-up found the sticky navigation could cover the newly opened compar
 The final public status review replaced raw parser/timeout messages with a plain-language service/connection recovery message. Desktop/mobile tests now inject both HTTP 503 and malformed JSON before verifying successful recovery. Both cases, lint and build passed locally.
 
 Conflict review now also exposes a failed refresh instead of hiding its error behind an existing comparison. Recovery clears that error after a successful comparison, and the server's conflict message directs users to review their changes. Desktop/mobile tests verify editing during comparison, an injected 503, successful retry and persistence of the latest text. Lint/build and both targeted cases passed.
+
+### Repeat-audit deployment verified
+
+- Final application `9e1b06f` passed Linux CI 34120296196: 43 backend/unit tests, 72 Chromium cases, nine release fault checks, lint/build and zero reported audit vulnerabilities.
+- Deployed through root `deploy.sh` into green after a validated backup. All 24 continuous public readiness probes passed across the switch; blue exited with code zero. Repeating the command verified local/routed health and made no release changes.
+- Live smoke passed 48 desktop/mobile checks with zero console errors. New application logs had no warning/error entries in the inspected window; all MirrorTape and twelve unrelated CodexStore containers were healthy. Secret-file permissions and configuration fingerprint were preserved. The latest local compiled runtime is ready on port 3100.
+- Live provider settings remain disabled; their secure configuration path was requested. No live provider acceptance, customer data import, trading execution, production fault injection or complete mass-market readiness is claimed.

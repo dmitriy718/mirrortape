@@ -75,3 +75,5 @@ Passwords are excluded from autosave and hashed with versioned scrypt parameters
 Support requests are persisted with references, but there is no staffed support service or admin queue UI yet. Account-data retention/export/deletion policy, MFA/step-up for future trading, production monitoring/alerting, disaster recovery, verified marketing claims and legal/provider approval remain launch gates. Do not enable billing for an unfulfilled service.
 
 No open-source license grant has been added to this application source. Review asset provenance and third-party notices before distribution.
+
+From the clean VPS checkout, use `sudo ./deploy.sh --check` for preflight and `sudo ./deploy.sh --apply` for the active Docker/Caddy release pipeline. The default is read-only. See the [follow-up audit](docs/AUDIT_2026-09-07.md) for draft conflict recovery, shutdown and rollout failure checks, and the [verification report](docs/VERIFICATION.md) for the exact deployed commit and remaining launch gates.
