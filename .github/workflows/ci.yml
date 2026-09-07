@@ -43,6 +43,11 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - run: npm ci --ignore-scripts
+      - name: Validate deployment automation
+        run: |
+          bash -n ../deploy/vps-release.sh
+          shellcheck ../deploy/vps-release.sh
+          python3 -c 'import ast; ast.parse(open("../deploy/provision-vps.py").read())'
       - run: npx playwright install --with-deps chromium
       - run: npm run lint
       - run: npm run build

@@ -9,6 +9,7 @@ config=/etc/mirrortape
 slot=''
 old_slot=''
 old_commit=''
+old_config=''
 started=false
 switched=false
 mapping_backup=''
@@ -51,7 +52,7 @@ trap 'exit 143' TERM
 [[ -d "$repo/.git" ]] || fail 'Provide the clean MirrorTape source checkout.'
 [[ "$mode" == '--check' || "$mode" == '--apply' ]] || fail 'Use --check or --apply.'
 [[ "$dns_mode" == '--require-https' || "$dns_mode" == '--await-dns' ]] || fail 'Use --require-https or --await-dns.'
-for tool in docker git curl python3 caddy systemctl flock install; do command -v "$tool" >/dev/null || fail "Missing tool: $tool"; done
+for tool in docker git curl python3 caddy systemctl flock install sha256sum; do command -v "$tool" >/dev/null || fail "Missing tool: $tool"; done
 [[ $EUID -eq 0 ]] || fail 'Use the provisioned root deployment operator.'
 run docker info --format '{{.ServerVersion}}'
 run docker compose version
@@ -60,18 +61,19 @@ commit=$(git -c safe.directory="$repo" -C "$repo" rev-parse HEAD) || fail 'Commi
 [[ "$commit" =~ ^[a-f0-9]{40}$ ]] || fail 'Invalid commit.'
 for file in app.env postgres.env releases.env upstream.caddy; do [[ -f "$config/$file" ]] || fail "Provision $config/$file first."; done
 [[ $(stat -c '%a' "$config/app.env") == 600 && $(stat -c '%a' "$config/postgres.env") == 600 ]] || fail 'Secret files must use mode 0600.'
+config_hash=$(sha256sum "$config/app.env" | cut -d ' ' -f 1) || fail 'Cannot fingerprint application configuration.'
 run compose config --quiet
 run caddy validate --config /etc/caddy/Caddyfile
 if [[ "$mode" == '--check' ]]; then log 'Read-only container/proxy preflight passed.'; exit 0; fi
 exec 9>"$root/deploy.lock"
 flock -n 9 || fail 'A deployment is already running.'
 if [[ -f "$root/current" ]]; then
- read -r old_slot old_commit < "$root/current" || fail 'Cannot read previous release.'
+ read -r old_slot old_commit old_config < "$root/current" || fail 'Cannot read previous release.'
  [[ "$old_slot" =~ ^(blue|green)$ && "$old_commit" =~ ^[a-f0-9]{40}$ ]] || fail 'Invalid previous state.'
  [[ "$dns_mode" != '--await-dns' ]] || fail '--await-dns is restricted to first installation.'
 fi
 if [[ "$old_slot" == blue ]]; then slot=green; port=3102; else slot=blue; port=3101; fi
-if [[ "$old_commit" == "$commit" ]]; then
+if [[ "$old_commit" == "$commit" && "$old_config" == "$config_hash" ]]; then
  if [[ "$old_slot" == blue ]]; then port=3101; else port=3102; fi
  health "$port" "$commit" || fail 'Existing release is unhealthy.'
  log 'This exact release is already installed and healthy.'; exit 0
@@ -126,7 +128,7 @@ else
  log 'DNS staging mode: candidate health verified; public HTTPS is pending DNS and certificate issuance.'
 fi
 state=$(mktemp "$root/current.XXXXXX") || fail 'Could not stage release state.'
-printf '%s %s\n' "$slot" "$commit" > "$state" || fail 'Could not write release state.'
+printf '%s %s %s\n' "$slot" "$commit" "$config_hash" > "$state" || fail 'Could not write release state.'
 run mv "$state" "$root/current"
 switched=false
 if [[ -n "$old_slot" ]]; then compose stop "app-$old_slot" || log 'WARNING: previous service still needs draining'; fi
