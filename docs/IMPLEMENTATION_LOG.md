@@ -46,3 +46,13 @@ Publication verified: application commit `893bb73d4c6957950c355bde647769aad557d7
 - Added isolated Docker/Compose Node 24 + PostgreSQL 16 deployment, a provisioner that preserves existing secrets/sites, and blue/green Caddy releases with validated backups, transactional additive migrations and health-checked rollback.
 - Verified 31 integration tests and 50 Chromium desktop/mobile tests, ESLint, build and zero dependency audit findings. A final small provider-redirect draft flush and deployment hardening increment will also pass CI before release.
 - Production social-provider credentials, SMTP and any existing client database have not been supplied. Buttons remain accurately unavailable where configuration is missing; production payment and trading enablement remain gated.
+
+### VPS release completed and verified
+
+- Provisioned isolated MirrorTape Node 24/PostgreSQL 16 containers on `65.75.201.59`, preserving the twelve healthy CodexStore containers and existing Caddy sites. Applied both transactional migrations after validated backups. Root-owned secrets are mode 0600 and absent from Git.
+- Caddy obtained the domain certificate. `https://mirrortape.net` now returns HTTP 200 through Cloudflare; origin and public readiness report the deployed commit. The initial 525 resolved after certificate issuance.
+- Fixed production-only Cloudflare script injection/CSP conflicts with `no-transform` while retaining private cache directives. Added source-restricted Cloudflare client-IP forwarding and CSRF/referrer log redaction. Two real Caddy regression tests pass on macOS and Ubuntu.
+- Fixed root Git preflight index ownership and fail-open status inspection; safe provisioner and release reruns were verified without replacing secrets.
+- Final application release `5cc0983` passed [CI 34103096934](https://github.com/dmitriy718/mirrortape/actions/runs/34103096934): 32 integration/security tests, 50 Chromium cases, lint/build, deployment syntax checks and zero audit findings. The absent-SMTP signup/login test verifies actual account/session behavior without claiming email delivery.
+- Public browser smoke checks passed 18 desktop/mobile route combinations with zero console errors. Blue/green releases were observed through 48 and 13 consecutive public health probes, respectively, with zero failures. Previous processes stopped with exit code 0. Backups, previous images and hashed assets are retained.
+- No existing client database was supplied or imported; no live social-provider, Stripe, Alpaca or SMTP credentials were supplied or activated. Fault-injected rollback, off-site restore, load/soak and the remaining commercial/trading launch work are not represented as complete. See VERIFICATION.md for explicit remaining requirements.
