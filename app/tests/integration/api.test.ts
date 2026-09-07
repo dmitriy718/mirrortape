@@ -334,3 +334,70 @@ describe("real PostgreSQL API boundaries", () => {
     expect(r.body).not.toContain(config.SESSION_SECRET);
   });
 });
+
+it("support retries are idempotent, owner-scoped, and content-bound", async () => {
+  const g = await account(),
+    other = await account(),
+    requestId = randomUUID();
+  const payload = {
+    requestId,
+    email: "support@example.com",
+    message: "Privacy: Please explain the draft retention policy.",
+    website: "",
+  };
+  const send = (owner = g, body = payload) =>
+    app.inject({
+      method: "POST",
+      url: "/api/support",
+      headers: headers(owner),
+      payload: body,
+    });
+  const responses = await Promise.all([send(), send()]);
+  for (const response of responses) {
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ id: requestId, accepted: true });
+  }
+  expect(
+    (
+      await db.query(
+        "SELECT count(*)::int AS count FROM support_cases WHERE id=$1",
+        [requestId],
+      )
+    ).rows[0].count,
+  ).toBe(1);
+  expect((await send()).statusCode).toBe(200);
+  expect((await send(other)).statusCode).toBe(409);
+  expect(
+    (
+      await send(g, {
+        ...payload,
+        message: "General: A different request must have a new ID.",
+      })
+    ).statusCode,
+  ).toBe(409);
+});
+
+it("reads additive stored draft fields during rollback without accepting unknown write fields", async () => {
+  const g = await account();
+  await db.query("INSERT INTO drafts(user_id,data) VALUES($1,$2)", [
+    g.session.user.id,
+    JSON.stringify({
+      note: "Keep my research",
+      laterReleaseField: "optional metadata",
+    }),
+  ]);
+  const response = await app.inject({ url: "/api/draft", headers: headers(g) });
+  expect(response.statusCode).toBe(200);
+  expect(response.json().data.note).toBe("Keep my research");
+  expect(response.json().data).not.toHaveProperty("laterReleaseField");
+  const write = await app.inject({
+    method: "PUT",
+    url: "/api/draft",
+    headers: headers(g),
+    payload: {
+      revision: 0,
+      data: { ...response.json().data, laterReleaseField: "untrusted" },
+    },
+  });
+  expect(write.statusCode).toBe(400);
+});

@@ -1,3 +1,4 @@
+import { policyVersion } from "../policy.js";
 import { createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
@@ -46,8 +47,12 @@ export async function socialRoutes(app: FastifyInstance, ctx: Context) {
   });
   app.post("/api/auth/social/:provider/start", async (request, reply) => {
     const { provider } = params.parse(request.params);
-    const { intent } = z
-      .object({ intent: z.enum(["login", "link"]).default("login") })
+    const { intent, acceptedTerms, adult } = z
+      .object({
+        intent: z.enum(["login", "link"]).default("login"),
+        acceptedTerms: z.literal(policyVersion).optional(),
+        adult: z.literal(true).optional(),
+      })
       .strict()
       .parse(request.body ?? {});
     if (intent === "link") {
@@ -90,6 +95,19 @@ export async function socialRoutes(app: FastifyInstance, ctx: Context) {
         intent,
       ],
     );
+    if (acceptedTerms && adult)
+      await db.query(
+        "INSERT INTO audit_events(user_id,action,detail) VALUES($1,'terms_accepted',$2)",
+        [
+          request.identity.userId,
+          JSON.stringify({
+            version: policyVersion,
+            adult: true,
+            stateHash: hash(state),
+            method: provider,
+          }),
+        ],
+      );
     reply.setCookie(cookie, browser, cookieOptions);
     return { url };
   });
@@ -186,6 +204,14 @@ export async function socialRoutes(app: FastifyInstance, ctx: Context) {
           }
           if (existing.rowCount) return existing.rows[0].user_id as string;
           if (source.authenticated) throw new Error("Already signed in");
+          const consent = await connection.query(
+            "SELECT 1 FROM audit_events WHERE user_id=$1 AND action='terms_accepted' AND detail->>'version'=$2 AND detail->>'adult'='true' AND detail->>'stateHash'=$3",
+            [source.user_id, policyVersion, hash(body.state)],
+          );
+          if (!consent.rowCount) {
+            failure = "accept_terms";
+            throw new Error("Signup agreement required");
+          }
           if (profile.email) {
             await connection.query(
               "SELECT pg_advisory_xact_lock(hashtextextended($1,0))",

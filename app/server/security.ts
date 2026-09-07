@@ -132,6 +132,7 @@ export async function security(app: FastifyInstance, ctx: Context) {
         "There have been too many requests. Please wait a moment and try again.",
         wait,
       );
+    if (endpoint === "/api/public/status" && request.method === "GET") return;
     if (
       endpoint === "/api/webhooks/stripe" ||
       /^\/api\/auth\/social\/(google|apple|facebook)\/callback$/.test(endpoint)

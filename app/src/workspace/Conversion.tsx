@@ -38,6 +38,16 @@ const pageCtas: Record<
     detail:
       "Use the workspace today. Copy trading is not available in this release.",
   },
+  "/about": {
+    title: "Make this space your own.",
+    label: "Start my private workspace",
+    detail: "A free place for your list and your next question.",
+  },
+  "/blog": {
+    title: "Put an idea into practice.",
+    label: "Try a clearer research routine",
+    detail: "Explore the demo before creating your private account.",
+  },
   "/support": {
     title: "Keep your work and help in one place.",
     label: "Create an account to get started",

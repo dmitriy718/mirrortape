@@ -1,3 +1,4 @@
+import { policyVersion } from "../policy.js";
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
@@ -15,7 +16,13 @@ export async function authRoutes(app: FastifyInstance, ctx: Context) {
   const dummyHash = await passwordHash(token());
   app.post("/api/auth/register", async (request, reply) => {
     const body = z
-      .object({ email, password, ...trap })
+      .object({
+        email,
+        password,
+        acceptedTerms: z.literal(policyVersion),
+        adult: z.literal(true),
+        ...trap,
+      })
       .strict()
       .parse(request.body);
     if (body.website) return reply.code(202).send({ accepted: true });
@@ -52,6 +59,17 @@ export async function authRoutes(app: FastifyInstance, ctx: Context) {
       await client.query(
         "UPDATE users SET email=$2,password_hash=$3 WHERE id=$1",
         [request.identity.userId, body.email, encoded],
+      );
+      await client.query(
+        "INSERT INTO audit_events(user_id,action,detail) VALUES($1,'terms_accepted',$2)",
+        [
+          request.identity.userId,
+          JSON.stringify({
+            version: policyVersion,
+            adult: true,
+            method: "password",
+          }),
+        ],
       );
       if (config.SMTP_URL) {
         await client.query(

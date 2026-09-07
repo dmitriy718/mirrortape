@@ -1,3 +1,12 @@
+import PageMetadata from "./workspace/PageMetadata";
+import {
+  DocumentPage,
+  BlogPage,
+  BlogArticle,
+  StatusPage,
+} from "./workspace/SitePages";
+import ContactPage from "./workspace/ContactPage";
+import { documents } from "./content/documents";
 import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router";
 import { Landing, PricingPage, InformationPage } from "@/workspace/PublicPages";
@@ -8,6 +17,7 @@ const AuthPage = lazy(() => import("@/workspace/AuthPage"));
 export default function App() {
   return (
     <ErrorBoundary>
+      <PageMetadata />
       <Suspense
         fallback={
           <Shell>
@@ -29,6 +39,13 @@ export default function App() {
           )}
           <Route path="/demo" element={<DemoDashboard />} />
           <Route path="/pricing" element={<PricingPage />} />
+          {Object.keys(documents).map((path) => (
+            <Route key={path} path={path} element={<DocumentPage />} />
+          ))}
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/blog" element={<BlogPage />} />
+          <Route path="/blog/:slug" element={<BlogArticle />} />
+          <Route path="/status" element={<StatusPage />} />
           <Route path="*" element={<InformationPage />} />
         </Routes>
       </Suspense>

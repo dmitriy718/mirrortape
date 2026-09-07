@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /app
+Disallow: /api/
+Disallow: /_pages/
+Sitemap: https://mirrortape.net/sitemap.xml

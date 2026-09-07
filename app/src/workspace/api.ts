@@ -85,6 +85,14 @@ export type Draft = {
   allocation: number;
   note: string;
   supportMessage: string;
+  contactTopic:
+    | "General"
+    | "Account"
+    | "Privacy"
+    | "Accessibility"
+    | "Security"
+    | "Billing";
+  supportRequestId: string;
   shareActivity: boolean;
   helpDismissed: boolean;
   step: number;

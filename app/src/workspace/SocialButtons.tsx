@@ -6,10 +6,12 @@ export default function SocialButtons({
   session,
   link = false,
   beforeStart,
+  acceptedTerms,
 }: {
   session: Session;
   link?: boolean;
   beforeStart?: () => Promise<void>;
+  acceptedTerms?: string;
 }) {
   const [providers, setProviders] = useState<
       { id: keyof typeof names; available: boolean }[]
@@ -51,7 +53,10 @@ export default function SocialButtons({
         {
           method: "POST",
           csrf: session.csrf,
-          body: { intent: link ? "link" : "login" },
+          body: {
+            intent: link ? "link" : "login",
+            ...(acceptedTerms ? { acceptedTerms, adult: true } : {}),
+          },
         },
       );
       location.assign(result.url);

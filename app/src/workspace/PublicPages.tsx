@@ -281,11 +281,11 @@ const articles: Record<
       },
       {
         title: "Account or provider trouble",
-        text: "Use password recovery for account access. If Alpaca authorization expires, connect again. Manage any actual trades directly with your broker; this workspace does not execute them.",
+        text: "Use password recovery when email delivery is available, or contact us if you cannot sign in. If Alpaca authorization expires, connect again. Manage any actual trades directly with your broker; this workspace does not execute them.",
       },
       {
         title: "Send a support request",
-        text: "Open your workspace, choose Get help, and describe the problem. You will receive a reference after the message is stored. Do not include secrets or payment-card details.",
+        text: "Use Contact & support from the footer without signing in, or choose Get help inside your workspace. You will receive a reference after the message is stored. Do not include secrets or payment-card details.",
       },
     ],
   },

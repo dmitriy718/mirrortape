@@ -35,6 +35,17 @@ export const draftData = z
     allocation: z.number().int().min(1).max(25).default(5),
     note: safeText(2000).default(""),
     supportMessage: safeText(4000).default(""),
+    contactTopic: z
+      .enum([
+        "General",
+        "Account",
+        "Privacy",
+        "Accessibility",
+        "Security",
+        "Billing",
+      ])
+      .default("General"),
+    supportRequestId: z.union([z.literal(""), z.uuid()]).default(""),
     shareActivity: z.boolean().default(false),
     helpDismissed: z.boolean().default(false),
     step: z.number().int().min(0).max(2).default(0),

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { policyVersion } from "../content/documents";
 import SocialButtons from "./SocialButtons";
 import { Link, useLocation, Navigate } from "react-router";
 import { api, type Session, type SavedDraft } from "./api";
@@ -50,10 +51,13 @@ function AuthForm({
   const { pathname } = useLocation();
   const kind = pathname.split("/").at(-1) ?? "login";
   const draft = useDraft(initial, session);
+  const [consent, setConsent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState(""),
     [error, setError] = useState(() => {
       const errors: Record<string, string> = {
+        accept_terms:
+          "To create a new account, open signup and accept the Terms and adult eligibility requirement before choosing a provider.",
         failed:
           "Sign-in could not be verified. Try again or use your email and password.",
         cancelled:
@@ -92,6 +96,10 @@ function AuthForm({
     setError("");
     setBusy(true);
     try {
+      if (kind === "register" && !consent)
+        throw new Error(
+          "Confirm the Terms and adult eligibility requirement to create your account.",
+        );
       await draft.flush();
       const website = String(form.get("website") ?? "");
       const body =
@@ -101,7 +109,14 @@ function AuthForm({
             ? { token: linkToken, password, website }
             : ["recover", "resend"].includes(kind)
               ? { email: draft.data.email, website }
-              : { email: draft.data.email, password, website };
+              : {
+                  email: draft.data.email,
+                  password,
+                  website,
+                  ...(kind === "register"
+                    ? { acceptedTerms: policyVersion, adult: true }
+                    : {}),
+                };
       const result = await api<{ message?: string; created?: boolean }>(
         `/api/auth/${kind}`,
         {
@@ -142,9 +157,41 @@ function AuthForm({
           ? "Start free with your email and a password, or continue with a sign-in provider. No card required."
           : "Your account details stay between you and MirrorTape."}
       </p>
+      {kind === "register" && (
+        <label className="consent-field">
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => setConsent(e.target.checked)}
+          />
+          <span>
+            I am at least 18 and in the United States. I agree to the{" "}
+            <Link to="/terms" target="_blank" rel="noopener">
+              Terms of Service
+            </Link>{" "}
+            and have read the{" "}
+            <Link to="/privacy" target="_blank" rel="noopener">
+              Privacy Notice
+            </Link>{" "}
+            (opens in a new tab).
+          </span>
+        </label>
+      )}
       {["login", "register"].includes(kind) && (
         <>
-          <SocialButtons session={session} beforeStart={draft.flush} />
+          <SocialButtons
+            session={session}
+            acceptedTerms={
+              kind === "register" && consent ? policyVersion : undefined
+            }
+            beforeStart={async () => {
+              if (kind === "register" && !consent)
+                throw new Error(
+                  "Confirm the Terms and adult eligibility requirement before continuing.",
+                );
+              await draft.flush();
+            }}
+          />
           <p className="auth-divider">or use your email</p>
         </>
       )}

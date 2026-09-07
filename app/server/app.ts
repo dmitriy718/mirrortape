@@ -1,5 +1,7 @@
+import { publicSite } from "./public-site.js";
 import Fastify from "fastify";
 import formbody from "@fastify/formbody";
+import { providerAvailable } from "./auth/social-providers.js";
 import { socialRoutes } from "./routes/social.js";
 import cookie from "@fastify/cookie";
 import helmet from "@fastify/helmet";
@@ -154,15 +156,44 @@ export async function buildApp(ctx: Context, backgroundJobs = true) {
       return reply.code(503).send({ status: "schema_missing" });
     return { status: "ready", release: ctx.config.RELEASE_ID };
   });
+  app.get("/api/public/status", async () => {
+    const schema = await ctx.db.query(
+      "SELECT name FROM schema_migrations WHERE name=$1",
+      ["002_social_auth.sql"],
+    );
+    if (!schema.rowCount)
+      throw new AppError(
+        503,
+        "NOT_READY",
+        "The workspace is not ready. Try the check again shortly.",
+      );
+    return {
+      checkedAt: new Date().toISOString(),
+      workspace: true,
+      email: Boolean(ctx.config.SMTP_URL),
+      billing: ctx.config.BILLING_ENABLED === "true",
+      alpaca: Boolean(
+        ctx.config.ALPACA_CLIENT_ID && ctx.config.ALPACA_CLIENT_SECRET,
+      ),
+      social: {
+        google: providerAvailable(ctx.config, "google"),
+        apple: providerAvailable(ctx.config, "apple"),
+        facebook: providerAvailable(ctx.config, "facebook"),
+      },
+    };
+  });
   await workspaceRoutes(app, ctx);
   await authRoutes(app, ctx);
   await socialRoutes(app, ctx);
   await providerRoutes(app, ctx);
   await billingRoutes(app, ctx);
   if (backgroundJobs) jobs(app, ctx);
+  const site = await publicSite();
   await app.register(assets, {
     root: resolve("dist"),
     wildcard: false,
+    index: false,
+    globIgnore: ["**/*.html", "**/site-manifest.json"],
     setHeaders: (res, path) => {
       if (path.includes("/assets/"))
         res.header("Cache-Control", "public,max-age=31536000,immutable");
@@ -195,8 +226,20 @@ export async function buildApp(ctx: Context, backgroundJobs = true) {
         },
       });
     const path = (request.url.split("?")[0] ?? "").replace(/\/$/, "") || "/";
-    reply.code(routes.has(path) ? 200 : 404);
-    return reply.sendFile("index.html");
+    const rendered = site.pages.get(path);
+    if (rendered)
+      return reply
+        .code(200)
+        .type("text/html; charset=utf-8")
+        .header("Cache-Control", "no-cache")
+        .send(rendered);
+    const privatePath = path.startsWith("/app") && routes.has(path);
+    reply.header("X-Robots-Tag", "noindex, nofollow");
+    reply.header("Cache-Control", "no-store");
+    return reply
+      .code(privatePath ? 200 : 404)
+      .type("text/html; charset=utf-8")
+      .send(site.privateHtml);
   });
   app.addHook("preClose", async () => {
     ready = false;

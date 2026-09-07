@@ -5,6 +5,7 @@ import type { Context } from "../types.js";
 import { csrf, equal } from "../crypto.js";
 import { draftData, trap, email, safeText, idParams } from "../validation.js";
 import { transaction } from "../db.js";
+import { slidingLimit } from "../security.js";
 import { AppError } from "../errors.js";
 export async function workspaceRoutes(app: FastifyInstance, ctx: Context) {
   const { db, config } = ctx;
@@ -276,15 +277,63 @@ export async function workspaceRoutes(app: FastifyInstance, ctx: Context) {
   });
   app.post("/api/support", async (request, reply) => {
     const body = z
-      .object({ email, message: safeText(4000).min(10), ...trap })
+      .object({
+        email,
+        message: safeText(4000).min(10),
+        requestId: z.uuid().optional(),
+        ...trap,
+      })
       .strict()
       .parse(request.body);
     if (body.website) return reply.code(202).send({ accepted: true });
-    const id = randomUUID();
-    await db.query(
-      "INSERT INTO support_cases(id,user_id,email,message) VALUES($1,$2,$3,$4)",
+    const id = body.requestId ?? randomUUID();
+    const previous = await db.query(
+      "SELECT user_id,email,message FROM support_cases WHERE id=$1",
+      [id],
+    );
+    if (previous.rowCount) {
+      const row = previous.rows[0];
+      if (
+        row.user_id !== request.identity.userId ||
+        row.email !== body.email ||
+        row.message !== body.message
+      )
+        throw new AppError(
+          409,
+          "REQUEST_CHANGED",
+          "This request reference belongs to different information. Update your message and submit a new request.",
+        );
+      return { id, accepted: true };
+    }
+    const wait = await slidingLimit(
+      ctx,
+      `support:${csrf(request.ip, config.SESSION_SECRET)}`,
+      5,
+      600,
+    );
+    if (wait)
+      throw new AppError(
+        429,
+        "RATE_LIMIT",
+        "Several requests have already arrived. Keep your message and try again after the waiting period.",
+        wait,
+      );
+    const inserted = await db.query(
+      "INSERT INTO support_cases(id,user_id,email,message) VALUES($1,$2,$3,$4) ON CONFLICT(id) DO NOTHING RETURNING id",
       [id, request.identity.userId, body.email, body.message],
     );
+    if (!inserted.rowCount) {
+      const same = await db.query(
+        "SELECT 1 FROM support_cases WHERE id=$1 AND user_id=$2 AND email=$3 AND message=$4",
+        [id, request.identity.userId, body.email, body.message],
+      );
+      if (!same.rowCount)
+        throw new AppError(
+          409,
+          "REQUEST_CHANGED",
+          "Update your message and submit a new request.",
+        );
+    }
     return { id, accepted: true };
   });
   app.get("/api/audit", async (request) => ({

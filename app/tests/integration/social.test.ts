@@ -143,7 +143,7 @@ async function start(
       origin: config.APP_ORIGIN,
       "x-csrf-token": g.session.csrf,
     },
-    payload: { intent },
+    payload: { intent, acceptedTerms: "2026-09-07", adult: true },
   });
   expect(r.statusCode).toBe(200);
   const url = new URL(r.json().url);
@@ -303,4 +303,22 @@ it("requires authentication for private dashboard data while public status stays
     (await app.inject({ url: "/api/watchlist", headers: { cookie: g.cookie } }))
       .statusCode,
   ).toBe(401);
+});
+
+it("requires agreement for a new social signup and binds it to the particular attempt", async () => {
+  const g = await browser(),
+    s = await start(g, "google");
+  await db.query(
+    "UPDATE audit_events SET detail=jsonb_set(detail,'{stateHash}','\"wrong-attempt\"'::jsonb) WHERE user_id=$1 AND action='terms_accepted'",
+    [g.session.user.id],
+  );
+  const r = await callback(g, s);
+  expect(r.headers.location).toBe("/app/login?auth=accept_terms");
+  expect(
+    (
+      await db.query("SELECT 1 FROM social_identities WHERE subject=$1", [
+        subject,
+      ])
+    ).rowCount,
+  ).toBe(0);
 });

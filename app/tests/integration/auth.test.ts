@@ -35,9 +35,24 @@ it("signup and returning-client login work without claiming email delivery when 
       origin: config.APP_ORIGIN,
       "x-csrf-token": guest.json().csrf,
     },
-    payload: { email, password, website: "" },
+    payload: {
+      email,
+      password,
+      acceptedTerms: "2026-09-07",
+      adult: true,
+      website: "",
+    },
   });
   expect(created.statusCode).toBe(200);
+  const agreement = await db.query(
+    "SELECT detail FROM audit_events WHERE user_id=$1 AND action='terms_accepted'",
+    [guest.json().user.id],
+  );
+  expect(agreement.rows.map((r) => r.detail)).toContainEqual({
+    version: "2026-09-07",
+    adult: true,
+    method: "password",
+  });
   expect(created.json()).toMatchObject({
     created: true,
     verificationAvailable: false,
@@ -92,4 +107,22 @@ it("signup and returning-client login work without claiming email delivery when 
   });
   expect(signedIn.json().user.id).toBe(session.json().user.id);
   expect(signedIn.json().user.authenticated).toBe(true);
+});
+it("does not create an account without the current Terms and adult attestation", async () => {
+  const guest = await app.inject({ url: "/api/session" });
+  const email = `consent-${randomUUID()}@example.test`;
+  const r = await app.inject({
+    method: "POST",
+    url: "/api/auth/register",
+    headers: {
+      cookie: guest.headers["set-cookie"]!.toString().split(";")[0],
+      origin: config.APP_ORIGIN,
+      "x-csrf-token": guest.json().csrf,
+    },
+    payload: { email, password: "a long isolated test password", website: "" },
+  });
+  expect(r.statusCode).toBe(400);
+  expect(
+    (await db.query("SELECT 1 FROM users WHERE email=$1", [email])).rowCount,
+  ).toBe(0);
 });

@@ -28,6 +28,21 @@ try {
       "/risk",
       "/faq",
       "/demo",
+      "/about",
+      "/terms",
+      "/privacy",
+      "/cookies",
+      "/accessibility",
+      "/security",
+      "/refunds",
+      "/changelog",
+      "/contact",
+      "/status",
+      "/blog",
+      "/blog/a-watchlist-with-a-purpose",
+      "/blog/what-saved-actually-means",
+      "/blog/demo-and-private-workspace",
+      "/blog/a-weekly-workspace-review",
       "/app/login",
       "/app/register",
       "/app",
@@ -50,12 +65,21 @@ try {
           await page.getByRole("region", { name: "Next step" }).count(),
           1,
         );
-      if (route === "/demo" || route === "/app/register")
+      if (
+        [
+          "/demo",
+          "/app/register",
+          "/blog",
+          "/about",
+          "/contact",
+          "/terms",
+        ].includes(route)
+      )
         await page.screenshot({
           path:
             "test-results/public-" +
             device +
-            (route === "/demo" ? "-demo" : "-signup") +
+            route.replaceAll("/", "-") +
             ".png",
           fullPage: true,
         });

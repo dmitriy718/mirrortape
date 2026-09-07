@@ -42,6 +42,7 @@ export function Shell({ children }: { children: ReactNode }) {
           )}
           <Link to="/pricing">Pricing</Link>
           <Link to="/support">Help</Link>
+          {!privateView && <Link to="/blog">Journal</Link>}
         </nav>
         <ThemeControl />
       </header>
@@ -59,10 +60,67 @@ export function Shell({ children }: { children: ReactNode }) {
         )}
       </main>
       {signedIn === false && !pathname.startsWith("/app") && <ExitIntent />}
-      <footer className="product-footer">
-        <span>© {new Date().getFullYear()} MirrorTape</span>
-        <span>Stocks & options. Your decisions, clearly recorded.</span>
-        <Link to="/support">Contact & support</Link>
+      <footer className="product-footer site-footer">
+        <div className="footer-intro">
+          <Link to="/" className="wordmark">
+            MIRROR<span>TAPE</span>
+          </Link>
+          <p>
+            A clearer place for your research.
+            <br />A product of 625 Technologies Inc.
+          </p>
+          <p className="small">
+            Research tools for adults in the United States. No trade execution
+            or promised investment results.
+          </p>
+        </div>
+        {[
+          {
+            label: "Explore",
+            links: [
+              ["How it works", "/how-it-works"],
+              ["Demo dashboard", "/demo"],
+              ["Pricing", "/pricing"],
+              ["Journal", "/blog"],
+              ["Release notes", "/changelog"],
+            ],
+          },
+          {
+            label: "Company & help",
+            links: [
+              ["About", "/about"],
+              ["Help center", "/support"],
+              ["Contact & support", "/contact"],
+              ["Service status", "/status"],
+              ["Security", "/security"],
+            ],
+          },
+          {
+            label: "Policies",
+            links: [
+              ["Terms of Service", "/terms"],
+              ["Privacy Notice", "/privacy"],
+              ["Cookies", "/cookies"],
+              ["Accessibility", "/accessibility"],
+              ["Billing & refunds", "/refunds"],
+              ["Risk disclosure", "/risk"],
+            ],
+          },
+        ].map((group) => (
+          <nav key={group.label} aria-label={group.label}>
+            <h2>{group.label}</h2>
+            {group.links.map(([label, to]) => (
+              <Link key={to} to={to}>
+                {label}
+              </Link>
+            ))}
+          </nav>
+        ))}
+        <div className="footer-bottom">
+          <span>© {new Date().getFullYear()} 625 Technologies Inc.</span>
+          <Link to="/contact?topic=Privacy">Your privacy choices</Link>
+          <a href="/feed.xml">RSS feed</a>
+        </div>
       </footer>
     </div>
   );

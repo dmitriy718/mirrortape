@@ -9,3 +9,5 @@ test-results/
 .runtime/
 .DS_Store
 *.log
+
+.prerender/

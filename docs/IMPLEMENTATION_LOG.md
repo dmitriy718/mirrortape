@@ -56,3 +56,11 @@ Publication verified: application commit `893bb73d4c6957950c355bde647769aad557d7
 - Final application release `5cc0983` passed [CI 34103096934](https://github.com/dmitriy718/mirrortape/actions/runs/34103096934): 32 integration/security tests, 50 Chromium cases, lint/build, deployment syntax checks and zero audit findings. The absent-SMTP signup/login test verifies actual account/session behavior without claiming email delivery.
 - Public browser smoke checks passed 18 desktop/mobile route combinations with zero console errors. Blue/green releases were observed through 48 and 13 consecutive public health probes, respectively, with zero failures. Previous processes stopped with exit code 0. Backups, previous images and hashed assets are retained.
 - No existing client database was supplied or imported; no live social-provider, Stripe, Alpaca or SMTP credentials were supplied or activated. Fault-injected rollback, off-site restore, load/soak and the remaining commercial/trading launch work are not represented as complete. See VERIFICATION.md for explicit remaining requirements.
+
+## September 7, 2026 — company, policies and journal
+
+- Applied the owner's company/market facts: MirrorTape is a product of 625 Technologies Inc., marketed to the United States.
+- Built Terms, Privacy, Cookies, Accessibility, About, Security, Billing/refunds, Changelog, Contact, Status, Journal and four full article pages. Added footer discovery, page-specific metadata, production prerendering, sitemap/RSS and a local branded social image.
+- Added persisted public contact drafts and request references, safe retries without duplicate cases, versioned signup agreement records and OAuth-state-bound agreement for new social accounts.
+- Fixed the journal caption contrast defect found by Chromium/axe, a test metadata iterator mistake, development-mode leakage into local production builds, and compatibility of stored draft reads across additive releases.
+- Local gates passed: 39 integration/security tests, 62 Chromium cases, lint/build, zero audit findings and 48 public runtime smoke checks. Company/policy content, release compatibility and remaining operational/legal review are documented in PUBLIC_SITE.md. Production release evidence follows after CI and VPS verification.

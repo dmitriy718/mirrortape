@@ -423,6 +423,7 @@ test("real email queue, verification, guest upgrade, sign-in and recovery", asyn
   await page
     .getByLabel("Password (required)", { exact: true })
     .fill("A long unique test password");
+  await page.getByRole("checkbox", { name: /I am at least 18/ }).check();
   await page
     .getByRole("button", { name: "Create account", exact: true })
     .click();
@@ -526,7 +527,10 @@ test("F04 navigation flushes a fresh edit before leaving the workspace", async (
   await page
     .getByRole("textbox", { name: "Notes to your future self" })
     .fill("Save this before navigation.");
-  await page.getByRole("link", { name: "Pricing", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("link", { name: "Pricing", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Start with a free workspace." }),
   ).toBeVisible();
