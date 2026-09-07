@@ -70,3 +70,13 @@ Publication verified: application commit `893bb73d4c6957950c355bde647769aad557d7
 - Compatibility `e3940c5` and full application `6bfdd59` passed their exact Linux CI runs and deployed through the existing blue/green pipeline. The full release is active in blue; the retained compatibility release stopped with exit code 0.
 - Observed 20 then 22 continuous public HTTPS probes with zero failures across both switches; backups were validated before each release. All twelve unrelated CodexStore containers remain healthy.
 - Final production smoke passed 48 desktop/mobile route checks with zero console errors. Company identity, actual policy HTML, status gates, security headers and private-route separation were checked on mirrortape.net. Full evidence and remaining launch requirements are in VERIFICATION.md.
+
+## September 7, 2026 — repeat audit and failure recovery
+
+- Rechecked the existing twenty-feature acceptance map and active architecture. Full details and limitations are in AUDIT_2026-09-07.md.
+- Added shared cross-tab draft comparison and explicit conflict resolution across account, contact and workspace forms. Independent edits combine without replacing each other. Contact topic state and retry references remain tied to the saved draft.
+- Fixed maintenance/database shutdown ordering and controlled initialization failure cleanup. Added real-process Chromium SIGTERM/SIGINT tests with a blocked in-flight API request and a real-database maintenance drain test.
+- Added root deploy.sh, bounded shared health helpers, atomic routing restoration, candidate retention when rollback fails, and routed HTTPS verification on same-release reruns. CI includes nine isolated release failure checks; two actual Caddy regression checks remain green locally.
+- The first expanded run passed 43 backend/unit tests and 70 Chromium cases. A subsequent startup-failure check expanded Chromium coverage to 72. Its initial TypeScript nullable-capture failure was corrected before build/test execution. Final gate and deployment evidence follows after completion.
+
+Local final regression: lint/build, 43 backend/unit tests, 72 Chromium cases, nine release fault tests, two actual Caddy proxy tests and zero npm audit findings passed. Follow-up shutdown assertions also passed on both viewports. This increment changes no schema or credentials; live provider acceptance remains blocked by configuration.

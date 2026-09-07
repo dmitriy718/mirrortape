@@ -151,6 +151,17 @@ test("public contact autosaves and retry after a lost response creates one reque
     "Accessibility: Please help me use keyboard navigation in my workspace.",
   );
   await expect(page.locator(".request-reference")).toHaveText(rows[0].id);
+  await page.goto("/contact?topic=Accessibility");
+  await page.getByRole("button", { name: "Send request", exact: true }).click();
+  await expect(page.locator(".request-reference")).toHaveText(rows[0].id);
+  expect(
+    (
+      await db.query(
+        "SELECT count(*)::int AS count FROM support_cases WHERE email=$1",
+        [email],
+      )
+    ).rows[0].count,
+  ).toBe(1);
 });
 
 test("status exposes actual gates and recovers from an unavailable check", async ({
@@ -222,5 +233,109 @@ test("policy text and links remain readable with JavaScript disabled", async ({
     );
   } finally {
     await context.close();
+  }
+});
+
+test("F04/F05 contact compares cross-tab conflicts before replacing either version", async ({
+  page,
+  context,
+}, info) => {
+  info.annotations.push({
+    type: "expected-console",
+    description: "409 (Conflict)",
+  });
+  await page.goto("/contact");
+  await page
+    .getByLabel("Reply email (required)")
+    .fill(`conflict-${randomUUID()}@example.com`);
+  await expect(
+    page.getByRole("status").filter({ hasText: "Saved to server" }),
+  ).toBeVisible();
+  const other = await context.newPage();
+  try {
+    await other.goto("/contact");
+    await expect(other.getByLabel("Your message (required)")).toBeVisible();
+    await other
+      .getByLabel("Your message (required)")
+      .fill("Saved from the other tab and must be shown.");
+    await expect(
+      other.getByRole("status").filter({ hasText: "Saved to server" }),
+    ).toBeVisible();
+    await page
+      .getByLabel("Your message (required)")
+      .fill("My unsaved message must not silently disappear.");
+    await page.getByRole("button", { name: "Review saved changes" }).click();
+    const comparison = page.getByRole("region", {
+      name: "Compare draft changes",
+    });
+    await expect(comparison).toContainText(
+      "Saved from the other tab and must be shown.",
+    );
+    await expect(comparison).toContainText(
+      "My unsaved message must not silently disappear.",
+    );
+    expect(
+      (
+        await new AxeBuilder({ page })
+          .include(".draft-conflicts")
+          .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+          .analyze()
+      ).violations,
+    ).toEqual([]);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await comparison.screenshot({
+      path: info.outputPath("draft-conflict.png"),
+    });
+    await page
+      .getByRole("button", { name: "Keep this tab’s versions" })
+      .click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Saved to server" }),
+    ).toBeVisible();
+    await other.reload();
+    await expect(other.getByLabel("Your message (required)")).toHaveValue(
+      "My unsaved message must not silently disappear.",
+    );
+  } finally {
+    await other.close();
+  }
+});
+
+test("F04 contact recovery combines different fields across tabs", async ({
+  page,
+  context,
+}, info) => {
+  info.annotations.push({
+    type: "expected-console",
+    description: "409 (Conflict)",
+  });
+  await page.goto("/contact");
+  await expect(page.getByLabel("Your message (required)")).toBeVisible();
+  const other = await context.newPage();
+  const email = `merged-${randomUUID()}@example.com`;
+  try {
+    await other.goto("/contact");
+    await other.getByLabel("Reply email (required)").fill(email);
+    await expect(
+      other.getByRole("status").filter({ hasText: "Saved to server" }),
+    ).toBeVisible();
+    await page
+      .getByLabel("Your message (required)")
+      .fill("This message and the other email both need to survive.");
+    await page.getByRole("button", { name: "Review saved changes" }).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Saved to server" }),
+    ).toBeVisible();
+    await page.reload();
+    await expect(page.getByLabel("Reply email (required)")).toHaveValue(email);
+    await expect(page.getByLabel("Your message (required)")).toHaveValue(
+      "This message and the other email both need to survive.",
+    );
+  } finally {
+    await other.close();
   }
 });

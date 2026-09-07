@@ -74,9 +74,9 @@ export function jobs(app: FastifyInstance, ctx: Context) {
         });
   }, 1000);
   timer.unref();
-  app.addHook("onClose", async () => {
+  return async () => {
     clearInterval(timer);
     await running;
     transport?.close();
-  });
+  };
 }

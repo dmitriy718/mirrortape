@@ -1805,3 +1805,21 @@ body {
     break-inside: avoid;
   }
 }
+.draft-conflicts {
+  margin-block: 20px;
+}
+.draft-conflict {
+  padding-block: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.draft-conflict > div {
+  padding-block: 10px;
+}
+.draft-conflict p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text-2);
+}
+.draft-conflicts .button-row {
+  margin-top: 20px;
+}

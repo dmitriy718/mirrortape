@@ -1,3 +1,4 @@
+import DraftRecovery from "./DraftRecovery";
 import { useEffect, useState, type FormEvent } from "react";
 import { policyVersion } from "../content/documents";
 import SocialButtons from "./SocialButtons";
@@ -302,13 +303,7 @@ function AuthForm({
           </button>
         </form>
       )}
-      {draft.error && (
-        <Recovery
-          message={draft.error.message}
-          label="Retry email save"
-          onRetry={draft.retrySave}
-        />
-      )}
+      <DraftRecovery draft={draft} />
       <div className="auth-links">
         <Link to="/demo">Explore the demo</Link>
         <Link to="/app/resend">Resend verification email</Link>

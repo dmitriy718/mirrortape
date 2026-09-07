@@ -187,7 +187,6 @@ export async function buildApp(ctx: Context, backgroundJobs = true) {
   await socialRoutes(app, ctx);
   await providerRoutes(app, ctx);
   await billingRoutes(app, ctx);
-  if (backgroundJobs) jobs(app, ctx);
   const site = await publicSite();
   await app.register(assets, {
     root: resolve("dist"),
@@ -241,11 +240,16 @@ export async function buildApp(ctx: Context, backgroundJobs = true) {
       .type("text/html; charset=utf-8")
       .send(site.privateHtml);
   });
+  const stopJobs = backgroundJobs ? jobs(app, ctx) : async () => {};
   app.addHook("preClose", async () => {
     ready = false;
   });
   app.addHook("onClose", async () => {
-    await ctx.db.end();
+    try {
+      await stopJobs();
+    } finally {
+      await ctx.db.end();
+    }
   });
   return app;
 }

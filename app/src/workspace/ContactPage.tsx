@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from "react";
+import DraftRecovery from "./DraftRecovery";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useLocation } from "react-router";
 import { Shell, Recovery, Honeypot, Skeleton } from "./Primitives";
 import { api, type Session, type SavedDraft } from "./api";
@@ -103,13 +104,22 @@ function ContactForm({
 }) {
   const { search } = useLocation();
   const requested = new URLSearchParams(search).get("topic") ?? "";
-  const [topic, setTopic] = useState(
-      topics.includes(requested) ? requested : initial.data.contactTopic,
-    ),
-    [pending, setPending] = useState(false),
+  const [pending, setPending] = useState(false),
     [error, setError] = useState(""),
     [reference, setReference] = useState<string | null>(null);
   const draft = useDraft(initial, session);
+  const update = draft.update;
+  const queryApplied = useRef<string | null>(null);
+  useEffect(() => {
+    if (queryApplied.current === requested) return;
+    queryApplied.current = requested;
+    if (topics.includes(requested) && requested !== draft.data.contactTopic)
+      update({
+        contactTopic: requested as SavedDraft["data"]["contactTopic"],
+        supportRequestId: "",
+      });
+  }, [requested, update, draft.data.contactTopic]);
+  const topic = draft.data.contactTopic;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -181,7 +191,6 @@ function ContactForm({
               id="contact-topic"
               value={topic}
               onChange={(e) => {
-                setTopic(e.target.value);
                 draft.update({
                   contactTopic: e.target
                     .value as SavedDraft["data"]["contactTopic"],
@@ -235,13 +244,7 @@ function ContactForm({
                   ? `Saved to ${session.storage} at ${new Date(draft.savedAt).toLocaleTimeString()}`
                   : "Your draft will save when you start typing."}
           </p>
-          {draft.error && (
-            <Recovery
-              message={draft.error.message}
-              label="Retry draft save"
-              onRetry={draft.retrySave}
-            />
-          )}
+          <DraftRecovery draft={draft} />
           <p className="muted small">
             625 Technologies Inc. uses your message to handle your request as
             described in the <Link to="/privacy">Privacy Notice</Link>.

@@ -17,29 +17,29 @@ log() { printf '%s %s\n' "$(date -u +%FT%TZ)" "$*"; }
 fail() { log "ERROR: $*" >&2; exit 1; }
 run() { "$@" || fail "Command failed: $1"; }
 compose() { docker compose --env-file "$config/releases.env" -f "$repo/deploy/compose.yml" "$@"; }
-health() {
-  local port=$1 commit=$2 deadline result
-  deadline=$((SECONDS+30))
-  while ((SECONDS<deadline)); do
-    result=$(curl --fail --silent --max-time 2 "http://127.0.0.1:$port/health/ready") || result=''
-    if printf '%s' "$result" | python3 -c 'import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get("status")=="ready" and d.get("release")==sys.argv[1] else 1)' "$commit" 2>/dev/null; then return 0; fi
-    sleep 1
-  done
-  return 1
-}
+script_dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd) || exit 1
+# shellcheck source=deploy/lib/release-health.sh
+source "$script_dir/lib/release-health.sh"
+health() { release_health "http://127.0.0.1:$1/health/ready" "$2"; }
 cleanup() {
  local result=$?
  if ((result!=0)); then
   if [[ "$switched" == true ]]; then
    log 'Restoring previous Caddy routing.'
-   if [[ -f "$mapping_backup" ]] && install -m 0644 "$mapping_backup" "$config/upstream.caddy" && caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy; then
+   if release_restore_routing "$mapping_backup" "$config/upstream.caddy" /etc/caddy/Caddyfile; then
     log 'Previous routing restored.'
     if [[ -n "$old_slot" ]]; then
      local previous_port=3101
      [[ "$old_slot" == green ]] && previous_port=3102
-     health "$previous_port" "$old_commit" || log 'CRITICAL: previous release readiness failed after rollback.'
+     if ! health "$previous_port" "$old_commit"; then
+      started=false
+      log 'CRITICAL: previous release readiness failed; candidate retained for recovery.'
+     fi
     fi
-   else log 'CRITICAL: routing rollback failed. Inspect Caddy immediately.'; fi
+   else
+    started=false
+    log 'CRITICAL: routing rollback failed. Candidate retained; inspect Caddy immediately.'
+   fi
   fi
   if [[ "$started" == true ]]; then compose stop "app-$slot" || log 'WARNING: failed candidate needs inspection'; fi
   log 'Release failed; database, images and backups retained.'
@@ -72,11 +72,14 @@ if [[ -f "$root/current" ]]; then
  read -r old_slot old_commit old_config < "$root/current" || fail 'Cannot read previous release.'
  [[ "$old_slot" =~ ^(blue|green)$ && "$old_commit" =~ ^[a-f0-9]{40}$ ]] || fail 'Invalid previous state.'
  [[ "$dns_mode" != '--await-dns' ]] || fail '--await-dns is restricted to first installation.'
+ previous_port=3101
+ [[ "$old_slot" == green ]] && previous_port=3102
+ health "$previous_port" "$old_commit" || fail 'Previous release is unhealthy; reconcile it before replacing a slot.'
+ release_https_health "$old_commit" || fail 'Routing does not match the stable release. Reconcile routing before replacing a slot.'
 fi
 if [[ "$old_slot" == blue ]]; then slot=green; port=3102; else slot=blue; port=3101; fi
 if [[ "$old_commit" == "$commit" && "$old_config" == "$config_hash" ]]; then
  if [[ "$old_slot" == blue ]]; then port=3101; else port=3102; fi
- health "$port" "$commit" || fail 'Existing release is unhealthy.'
  log 'This exact release is already installed and healthy.'; exit 0
 fi
 [[ $(df -Pk "$root" | awk 'NR==2{print $4}') -ge 4194304 ]] || fail 'At least 4 GiB of disk space is required.'
@@ -113,18 +116,12 @@ run cp "$config/upstream.caddy" "$mapping_backup"
 proposal=$(mktemp "$config/upstream.XXXXXX") || fail 'Could not stage proxy mapping.'
 printf 'reverse_proxy 127.0.0.1:%s {\n header_up X-Forwarded-For {http.vars.mirrortape_client_ip}\n}\n' "$port" > "$proposal" || fail 'Could not write mapping.'
 run chmod 0644 "$proposal"
-run mv "$proposal" "$config/upstream.caddy"
 switched=true
+run mv "$proposal" "$config/upstream.caddy"
 run caddy validate --config /etc/caddy/Caddyfile
 run systemctl reload caddy
 if [[ "$dns_mode" == '--require-https' ]]; then
- deadline=$((SECONDS+30)); https_ok=false
- while ((SECONDS<deadline)); do
-  result=$(curl --fail --silent --max-time 2 --resolve mirrortape.net:443:127.0.0.1 https://mirrortape.net/health/ready) || result=''
-  if printf '%s' "$result" | python3 -c 'import json,sys;d=json.load(sys.stdin);sys.exit(0 if d.get("status")=="ready" and d.get("release")==sys.argv[1] else 1)' "$commit" 2>/dev/null; then https_ok=true; break; fi
-  sleep 1
- done
- [[ "$https_ok" == true ]] || fail 'Routed HTTPS health failed.'
+ release_https_health "$commit" || fail 'Routed HTTPS health failed.'
 else
  log 'DNS staging mode: candidate health verified; public HTTPS is pending DNS and certificate issuance.'
 fi

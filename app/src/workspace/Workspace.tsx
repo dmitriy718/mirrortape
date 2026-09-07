@@ -1,3 +1,4 @@
+import DraftRecovery from "./DraftRecovery";
 import { useEffect, useState, useRef, type FormEvent } from "react";
 import { Link } from "react-router";
 import {
@@ -338,21 +339,7 @@ function WorkspaceContent({ initial }: { initial: Snapshot }) {
                   : "Ready when you are"}
         </div>
       </div>
-      {draft.error && (
-        <Recovery
-          message={draft.error.message}
-          label={
-            draft.error.code === "DRAFT_CONFLICT"
-              ? "Load saved version"
-              : "Retry save"
-          }
-          onRetry={() => {
-            if (draft.error?.code === "DRAFT_CONFLICT")
-              void action("Loading saved version", draft.reload);
-            else draft.retrySave();
-          }}
-        />
-      )}
+      <DraftRecovery draft={draft} />
       {error && (
         <Recovery
           message={error}

@@ -45,8 +45,9 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: Validate deployment automation
         run: |
-          bash -n ../deploy/vps-release.sh
-          shellcheck ../deploy/vps-release.sh
+          bash -n ../deploy.sh ../deploy/vps-release.sh ../deploy/lib/release-health.sh
+          shellcheck -P .. ../deploy.sh ../deploy/vps-release.sh ../deploy/lib/release-health.sh
+          node --test ../deploy/tests/release.test.mjs
           python3 -c 'import ast; ast.parse(open("../deploy/provision-vps.py").read())'
       - run: npx playwright install --with-deps chromium
       - run: npm run lint

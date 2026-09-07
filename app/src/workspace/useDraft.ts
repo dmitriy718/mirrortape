@@ -7,6 +7,8 @@ import {
   type Draft,
 } from "./api";
 
+import { mergeDraft, type DraftConflict } from "./draftMerge";
+
 export function useDraft(initial: SavedDraft, session: Session) {
   const [data, setData] = useState(initial.data);
   const [saved, setSaved] = useState(JSON.stringify(initial.data));
@@ -14,6 +16,12 @@ export function useDraft(initial: SavedDraft, session: Session) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [retry, setRetry] = useState(0);
+  const [review, setReview] = useState<{
+    fresh: SavedDraft;
+    local: Draft;
+    conflicts: DraftConflict[];
+  } | null>(null);
+  const [reviewing, setReviewing] = useState(false);
   const revision = useRef(initial.revision);
   const current = useRef(initial.data);
   const persisted = useRef(JSON.stringify(initial.data));
@@ -118,24 +126,84 @@ export function useDraft(initial: SavedDraft, session: Session) {
     };
   }, [flush]);
 
-  const update = (change: Partial<Draft>) => {
+  const update = useCallback((change: Partial<Draft>) => {
     current.current = { ...current.current, ...change };
     setData(current.current);
-  };
+  }, []);
   const retrySave = () => {
     setError(null);
     setRetry((n) => n + 1);
   };
-  const reload = async () => {
-    if (pending.current) await pending.current.catch(() => undefined);
-    const fresh = await api<SavedDraft>("/api/draft");
+  const accept = async (fresh: SavedDraft, next: Draft) => {
     revision.current = fresh.revision;
-    current.current = fresh.data;
     persisted.current = JSON.stringify(fresh.data);
-    setData(fresh.data);
+    current.current = next;
+    setData(next);
     setSaved(persisted.current);
     setSavedAt(fresh.savedAt);
     setError(null);
+    setReview(null);
+    await flush();
+  };
+  const reviewChanges = async () => {
+    setReviewing(true);
+    try {
+      if (pending.current) await pending.current.catch(() => undefined);
+      const fresh = await api<SavedDraft>("/api/draft");
+      const merged = mergeDraft(
+        JSON.parse(persisted.current),
+        current.current,
+        fresh.data,
+      );
+      if (merged.conflicts.length)
+        setReview({
+          fresh,
+          local: current.current,
+          conflicts: merged.conflicts,
+        });
+      else await accept(fresh, merged.data);
+    } catch (cause) {
+      setError(
+        cause instanceof ApiError
+          ? cause
+          : new ApiError(
+              "We could not compare the saved changes. Keep this page open and try again.",
+              "DRAFT_CONFLICT",
+              0,
+            ),
+      );
+    } finally {
+      setReviewing(false);
+    }
+  };
+  const resolveChanges = async (choice: "local" | "remote") => {
+    if (!review) return;
+    if (JSON.stringify(current.current) !== JSON.stringify(review.local)) {
+      await reviewChanges();
+      return;
+    }
+    setReviewing(true);
+    try {
+      const merged = mergeDraft(
+        JSON.parse(persisted.current),
+        review.local,
+        review.fresh.data,
+        choice,
+      );
+      await accept(review.fresh, merged.data);
+    } catch (cause) {
+      setError(
+        cause instanceof ApiError
+          ? cause
+          : new ApiError(
+              "Your choice could not be saved. Keep this page open and try again.",
+              "SAVE_FAILED",
+              0,
+            ),
+      );
+    } finally {
+      setReviewing(false);
+    }
   };
   return {
     data,
@@ -145,7 +213,10 @@ export function useDraft(initial: SavedDraft, session: Session) {
     savedAt,
     error,
     retrySave,
-    reload,
+    review,
+    reviewing,
+    reviewChanges,
+    resolveChanges,
     flush,
   };
 }
