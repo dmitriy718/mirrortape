@@ -273,8 +273,11 @@ export function StatusPage() {
         return r.json();
       })
       .then(setData)
-      .catch((e) => {
-        if (!abort.signal.aborted) setError(e.message);
+      .catch(() => {
+        if (!abort.signal.aborted)
+          setError(
+            "We could not check service availability. The connection or service may be temporarily unavailable. Try again shortly.",
+          );
       })
       .finally(() => {
         if (!abort.signal.aborted) setChecking(false);

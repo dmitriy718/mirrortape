@@ -182,6 +182,20 @@ test("status exposes actual gates and recovers from an unavailable check", async
     { times: 1 },
   );
   await page.goto("/status");
+  await page.route(
+    "**/api/public/status",
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: "invalid service response",
+      }),
+    { times: 1 },
+  );
+  await page.getByRole("button", { name: "Retry service check" }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "We could not check service availability.",
+  );
   await page.getByRole("button", { name: "Retry service check" }).click();
   await expect(
     page.getByRole("heading", { name: "Workspace is responding" }),
