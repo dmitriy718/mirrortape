@@ -84,8 +84,11 @@ export async function authRoutes(app: FastifyInstance, ctx: Context) {
       created,
       verificationAvailable: Boolean(config.SMTP_URL),
       accepted: true,
-      message:
-        "If this email can be registered, a verification link will arrive shortly. Check your inbox or sign in to your existing account.",
+      message: config.SMTP_URL
+        ? "If this email can be registered, a verification link will arrive shortly. Check your inbox or sign in to your existing account."
+        : created
+          ? "Your private account is ready. Email verification is not available yet."
+          : "If you already have an account, sign in with your existing sign-in method.",
     };
   });
   app.post("/api/auth/verify", async (request, reply) => {
