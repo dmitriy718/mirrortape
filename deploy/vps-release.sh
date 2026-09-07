@@ -111,7 +111,7 @@ run chmod -R a+rX "$root/shared"
 mapping_backup="$root/backups/$(date -u +%Y%m%dT%H%M%SZ)-upstream.caddy"
 run cp "$config/upstream.caddy" "$mapping_backup"
 proposal=$(mktemp "$config/upstream.XXXXXX") || fail 'Could not stage proxy mapping.'
-printf 'reverse_proxy 127.0.0.1:%s\n' "$port" > "$proposal" || fail 'Could not write mapping.'
+printf 'reverse_proxy 127.0.0.1:%s {\n header_up X-Forwarded-For {http.vars.mirrortape_client_ip}\n}\n' "$port" > "$proposal" || fail 'Could not write mapping.'
 run chmod 0644 "$proposal"
 run mv "$proposal" "$config/upstream.caddy"
 switched=true

@@ -34,3 +34,11 @@ sudo journalctl -u caddy --since '15 minutes ago'
 ```
 
 Never print `docker compose config` or container environment inspection output: they can contain secrets. Use `docker compose config --quiet` for validation. Backups live under `/srv/mirrortape/backups` with restricted access. Off-site backup retention, SMTP delivery, social-provider configuration and public TLS checks are separate operational requirements.
+
+## Cloudflare and public browser verification
+
+The MirrorTape site adds `Cache-Control: no-transform` while retaining the origin's `no-store`/`no-cache` directives. This prevents automatic HTML/script injection from conflicting with the strict `script-src 'self'` policy. Cloudflare documents this behavior for [Web Analytics](https://developers.cloudflare.com/web-analytics/faq/) and [JavaScript Detections](https://developers.cloudflare.com/cloudflare-challenges/challenge-types/javascript-detections/). If separate Cloudflare rules require JavaScript Detection success, review those rules before launch; MirrorTape's own rate limits, honeypots and CSRF checks remain enforced.
+
+The site derives the forwarded client address from the actual remote connection. It accepts `CF-Connecting-IP` only from Cloudflare's explicitly listed [IPv4](https://www.cloudflare.com/ips-v4/) and [IPv6](https://www.cloudflare.com/ips-v6/) networks. Untrusted clients cannot supply their own forwarded identity. The release mapping forwards this derived address; the application trusts only its dedicated Docker gateway. Recheck the upstream network lists during infrastructure maintenance. Global trust settings for other VPS sites are not modified.
+
+Run the Caddy regression tests with `CADDY_BIN=/path/to/caddy node --test deploy/tests/proxy.test.mjs`. They check spoofed-header rejection, trusted forwarding and preservation of private cache controls. Run the public browser smoke check from `app` with `node scripts/smoke-public.mjs`; it checks 18 public/auth/demo route and viewport combinations, the private route guard, responsive overflow and console errors. It does not register fabricated customers or execute payments/trades.
