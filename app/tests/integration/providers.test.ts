@@ -258,4 +258,53 @@ describe("provider boundary contracts with deterministic external responses", ()
       ).rows[0].status,
     ).toBe("canceled");
   });
+  it("live Alpaca linking stays closed without commercial approval while paper remains available", async () => {
+    const restrictedDb = database(config);
+    const restricted = await buildApp(
+      {
+        db: restrictedDb,
+        config: { ...config, ALPACA_COMMERCIAL_APPROVED: "false" },
+      },
+      false,
+    );
+    try {
+      await restricted.ready();
+      const result = await restricted.inject({ url: "/api/session" });
+      const session = result.json();
+      expect(session.features.alpaca).toBe(true);
+      expect(session.features.alpacaLive).toBe(false);
+      const cookie =
+        result.headers["set-cookie"]?.toString().split(";")[0] ?? "";
+      await restrictedDb.query(
+        "UPDATE users SET verified=true,email=$2 WHERE id=$1",
+        [session.user.id, `${randomUUID()}@example.com`],
+      );
+      await restrictedDb.query(
+        "UPDATE sessions SET authenticated=true WHERE user_id=$1",
+        [session.user.id],
+      );
+      const headers = {
+        cookie,
+        origin: config.APP_ORIGIN,
+        "x-csrf-token": session.csrf,
+      };
+      const live = await restricted.inject({
+        method: "POST",
+        url: "/api/brokers/alpaca/connect",
+        headers,
+        payload: { mode: "live" },
+      });
+      expect(live.statusCode).toBe(503);
+      const paper = await restricted.inject({
+        method: "POST",
+        url: "/api/brokers/alpaca/connect",
+        headers,
+        payload: { mode: "paper" },
+      });
+      expect(paper.statusCode).toBe(200);
+      expect(new URL(paper.json().url).hostname).toBe("app.alpaca.markets");
+    } finally {
+      await restricted.close();
+    }
+  });
 });

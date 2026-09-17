@@ -68,6 +68,7 @@ export type Session = {
     email: boolean;
     billing: boolean;
     alpaca: boolean;
+    alpacaLive: boolean;
     address: boolean;
   };
   storage: "server" | "cloud";

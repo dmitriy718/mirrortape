@@ -21,6 +21,9 @@ export async function workspaceRoutes(app: FastifyInstance, ctx: Context) {
       email: Boolean(config.SMTP_URL),
       billing: config.BILLING_ENABLED === "true",
       alpaca: Boolean(config.ALPACA_CLIENT_ID && config.ALPACA_CLIENT_SECRET),
+      alpacaLive:
+        Boolean(config.ALPACA_CLIENT_ID && config.ALPACA_CLIENT_SECRET) &&
+        config.ALPACA_COMMERCIAL_APPROVED === "true",
       address: Boolean(config.GOOGLE_PLACES_API_KEY),
     },
     storage: config.NODE_ENV === "production" ? "cloud" : "server",

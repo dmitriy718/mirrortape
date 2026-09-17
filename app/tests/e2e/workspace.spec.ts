@@ -386,6 +386,9 @@ test("routes, provider gates, support draft and snapshots have no false success"
     page.getByRole("button", { name: "Connect Alpaca paper" }),
   ).toBeDisabled();
   await expect(
+    page.getByRole("button", { name: "Connect live account" }),
+  ).toBeDisabled();
+  await expect(
     page.getByText("No brokerage accounts connected."),
   ).toBeVisible();
   await page.getByRole("tab", { name: "Get help" }).click();

@@ -42,6 +42,15 @@ function headers(g: Awaited<ReturnType<typeof account>>) {
   };
 }
 describe("real PostgreSQL API boundaries", () => {
+  it("session feature flags keep billing and Alpaca linking off without configuration", async () => {
+    const r = await app.inject({ url: "/api/session" });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().features).toMatchObject({
+      billing: false,
+      alpaca: false,
+      alpacaLive: false,
+    });
+  });
   it("F15 requires origin and session-bound CSRF on every browser mutation", async () => {
     const g = await account();
     for (const endpoint of [

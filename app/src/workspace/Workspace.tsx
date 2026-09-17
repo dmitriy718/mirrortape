@@ -790,6 +790,7 @@ function AccountPanel({
       };
       positions: { symbol: string; qty: string; market_value: string | null }[];
       asOf: string;
+      access: string;
     } | null>(null);
   useEffect(() => {
     const controller = new AbortController();
@@ -885,7 +886,7 @@ function AccountPanel({
             disabled={
               Boolean(busy) ||
               !session.user.verified ||
-              !session.features.alpaca
+              !session.features.alpacaLive
             }
             onClick={() =>
               void perform("Preparing Alpaca authorization", () =>
@@ -900,6 +901,12 @@ function AccountPanel({
           <p className="small muted">
             Alpaca linking is unavailable on this installation. Your guest
             workspace remains usable.
+          </p>
+        )}
+        {session.features.alpaca && !session.features.alpacaLive && (
+          <p className="small muted">
+            Live account linking is not approved on this installation. Paper
+            account linking remains available.
           </p>
         )}
         {connections === null ? (
@@ -947,7 +954,8 @@ function AccountPanel({
         {account && (
           <div className="account-snapshot">
             <span className="status-pill">
-              {account.mode.toUpperCase()} · {account.account.status}
+              {account.mode.toUpperCase()} · {account.account.status} ·{" "}
+              {account.access.toUpperCase()}
             </span>
             <h3>
               {new Intl.NumberFormat("en-US", {
